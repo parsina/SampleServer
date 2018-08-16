@@ -9,6 +9,8 @@ public interface UserService
 {
     ResultData createUser(String email, String password, String repeatedPassword);
 
+    ResultData confirmRegistration(String token);
+
     User activateUser(User user);
 
     void save(User user);

@@ -48,6 +48,8 @@ public class User
 
     private @NonNull String password;
 
+    private @NotNull String confirmationToken;
+
     @ManyToMany
     @JoinTable(name = "user_role", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles;

@@ -4,6 +4,7 @@ import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 
 import com.coin.app.model.User;
+import com.coin.app.service.AccountService;
 import com.coin.app.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.MailException;
@@ -23,12 +24,17 @@ public class EmailServiceImpl implements EmailService
     private UserService userService;
 
     @Autowired
+    private AccountService accountService;
+
+    @Autowired
     private MailContentBuilderService mailContentBuilderService;
 
     @Async
     public void sendActivationLink(String email)
     {
         User user = userService.findByUsername(email);
+        user.setAccount(accountService.createAccount(user));
+        userService.saveUser(user);
 
         String message = "لطفا جهت تایید ایمیل و فعال سازی حساب خود بر روی لینک زیر کلیک نمایید: " ;
         String link = "http://localhost:4200/confirm?token=" + user.getConfirmationToken();
@@ -36,7 +42,6 @@ public class EmailServiceImpl implements EmailService
         MimeMessagePreparator messagePreparator = mimeMessage ->
         {
             MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
-            user.setEmail("javad.farzaneh@clui.com");
             messageHelper.setTo(user.getEmail());
             messageHelper.setSubject("تایید ثبت نام");
             String content = mailContentBuilderService.build(message, link, "activationLink");

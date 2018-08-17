@@ -61,10 +61,10 @@ public class UserServiceImpl implements UserService
             user.setCreatedDate(new Date());
             user.setParentId(-1L);
             user.setEmail(email.toLowerCase());
-            user.setPassword(bCryptPasswordEncoder.encode("password"));
+            user.setPassword(bCryptPasswordEncoder.encode(password));
             user.setStatus(UserStatus.INACTIVE);
             user.setConfirmationToken(UUID.randomUUID().toString());
-//            userRepository.save(user);
+            userRepository.save(user);
             result.setSuccess(true);
             result.setMessage("User Created !");
             result.addProperty("userEmail", user.getEmail());
@@ -89,9 +89,48 @@ public class UserServiceImpl implements UserService
             user.setStatus(UserStatus.ACTIVE);
             userRepository.save(user);
             result.setSuccess(true);
-            result.setMessage("User is activation finished");
+            result.setMessage("User activation is finished");
             result.addProperty("id", user.getId());
             result.addProperty("email", user.getEmail());
+        }
+        return result;
+    }
+
+    @Override
+    public ResultData login(String email, String password)
+    {
+        ResultData result = new ResultData(false, "");
+        User user = userRepository.findByEmail(email);
+        if(user == null)
+        {
+            result.setMessage("Username is incorrect !");
+            return result;
+        }
+        else
+        if(user.getStatus().equals(UserStatus.INACTIVE))
+        {
+            result.setMessage("User is not Active");
+            return result;
+        }
+        else
+        if(user.getStatus().equals(UserStatus.DELETED))
+        {
+            result.setMessage("User is Deleted");
+            return result;
+        }
+        else
+        if(!bCryptPasswordEncoder.matches(password, user.getPassword()))
+        {
+            result.setMessage("Password is incorrect !");
+            return result;
+        }
+        else
+        {
+            result.setSuccess(true);
+            result.setMessage("User loged in !");
+            result.addProperty("id", user.getId());
+            result.addProperty("email", user.getEmail());
+            result.addProperty("info", user.getUserInfo());
         }
         return result;
     }

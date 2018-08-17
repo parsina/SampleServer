@@ -11,6 +11,8 @@ public interface UserService
 
     ResultData confirmRegistration(String token);
 
+    ResultData login(String email, String password);
+
     User activateUser(User user);
 
     void save(User user);

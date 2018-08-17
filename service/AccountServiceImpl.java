@@ -24,7 +24,7 @@ public class AccountServiceImpl implements AccountService
     {
         Account account = new Account();
         account.setCreatedDate(new Date());
-        account.setStatus(AccountStatus.ACTIVE);
+        account.setStatus(AccountStatus.INACTIVE);
         account.setWallet(walletService.createWallet(user));
         return accountRepository.save(account);
     }

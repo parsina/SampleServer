@@ -53,6 +53,12 @@ public class UserController
         return userService.confirmRegistration(input.get("token").toString());
     }
 
+    @PostMapping("/authenticate")
+    public ResultData login(@RequestBody Map<String, ?> input)
+    {
+        return userService.login(input.get("username").toString(), input.get("password").toString());
+    }
+
     @GetMapping(path = {"/{id}"})
     public User findOne(@PathVariable("id") Long id)
     {

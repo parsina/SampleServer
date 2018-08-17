@@ -41,19 +41,22 @@ public class BitCoinJServiceImpl implements BitcoinJService
 
     private static Address forwardingAddress;
     private static WalletAppKit kit;
+
     NetworkParameters params;
 
     @Override
     public void initialize()
     {
         BriefLogFormatter.init();
+
+        // The available options are:
+        // - MainNetParams for main bitcoin network
+        // - TestNet3Params for test app with a real network
+        // - RegTestParams for developing project (Developement)
         params = TestNet3Params.get() ;
 
         if(walletRepository.findByName("admin@coinnet.net") != null)
             forwardingAddress = new Address(params, walletRepository.findByName("admin@coinnet.net").getAddress());
-
-        System.out.println("Network: " + params.getId());
-        System.out.println("Forwarding address: " + forwardingAddress);
     }
 
 

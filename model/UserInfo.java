@@ -1,7 +1,7 @@
 package com.coin.app.model;
 
 import java.util.Date;
-import java.util.Set;
+import java.util.List;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
@@ -14,11 +14,9 @@ import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.OneToOne;
-import javax.persistence.Table;
-import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
 
-import com.coin.app.model.enums.UserStatus;
+import com.coin.app.model.enums.BankName;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -32,9 +30,8 @@ import lombok.ToString;
 @NoArgsConstructor
 @ToString
 @EqualsAndHashCode
-@Table(name = "\"User\"")
 
-public class User
+public class UserInfo
 {
     @Id
     @GeneratedValue
@@ -42,24 +39,18 @@ public class User
 
     private @NotNull Date createdDate;
 
-    private @NonNull Long parentId;
+    private @NonNull String firstName;
 
-    private @NonNull String email;
+    private @NonNull String lastName;
 
-    private @NonNull String password;
-
-    private @NotNull String confirmationToken;
-
-    @ManyToMany
-    @JoinTable(name = "user_role", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
-    private Set<Role> roles;
+    private @NonNull Long phoneNumber;
 
     @Enumerated(EnumType.STRING)
-    private @NotNull UserStatus status;
+    private @NotNull BankName bankName;
 
-    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    private Account account;
+    private @NonNull Long accountNumber;
 
-    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    private UserInfo userInfo;
+    private @NonNull Long cardNumber;
+
+    private @NonNull Long sheba;
 }

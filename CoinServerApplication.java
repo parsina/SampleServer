@@ -1,15 +1,21 @@
 package com.coin.app;
 
+import java.util.stream.Stream;
+
+import com.coin.app.service.BitcoinJService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
 @ComponentScan("com")
 public class CoinServerApplication
 {
-//    @Autowired
-//    BitcoinJService bitcoinJService;
+    @Autowired
+    BitcoinJService bitcoinJService;
 //
 //    @Autowired
 //    UserService userService;
@@ -66,11 +72,11 @@ public class CoinServerApplication
 //        }
 //    }
 
-//    @Bean
-//    ApplicationRunner init()
-//    {
-//        bitcoinJService.initialize();
-//
+    @Bean
+    ApplicationRunner init()
+    {
+        bitcoinJService.initialize();
+
 //        User user = userService.createUser("User", "01", "user01@coinnet.net", "123123");
 //        if(user.getStatus().equals(UserStatus.INACTIVE))
 //        {
@@ -83,20 +89,8 @@ public class CoinServerApplication
 //        bitcoinJService.startCoinReceiveListener(user.getAccount());
 
 //        binanceAPI();
-
-
-//        return args ->
-//        {
-//            Stream.of("Ferrari", "Jaguar", "Porsche", "Lamborghini", "Bugatti",
-//                    "AMC Gremlin", "Triumph Stag", "Ford Pinto", "Yugo GV").forEach(name ->
-//            {
-//                Car car = new Car();
-//                car.setName(name);
-////                repository.save(car);
-//            });
-//            repository.findAll().forEach(System.out::println);
-//        };
-//    }
+        return args -> {};
+    }
 
 //    private void binanceAPI()
 //    {

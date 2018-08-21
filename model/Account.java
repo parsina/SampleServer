@@ -3,19 +3,17 @@ package com.coin.app.model;
 import java.util.Date;
 import java.util.List;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.OneToMany;
+import javax.persistence.ManyToMany;
 import javax.persistence.OneToOne;
 import javax.validation.constraints.NotNull;
 
 import com.coin.app.model.enums.AccountStatus;
+import com.coin.app.model.livescore.Form;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -44,4 +42,7 @@ public class Account
 
     @Enumerated(EnumType.STRING)
     private AccountStatus status;
+
+    @ManyToMany(mappedBy = "accounts")
+    private List<Form> forms;
 }

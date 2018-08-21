@@ -1,12 +1,9 @@
-package com.coin.app.model;
-
-import java.util.Set;
+package com.coin.app.model.livescore;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.ManyToMany;
-import javax.persistence.Table;
+import javax.validation.constraints.NotNull;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -20,16 +17,10 @@ import lombok.ToString;
 @NoArgsConstructor
 @ToString
 @EqualsAndHashCode
-@Table(name = "\"Role\"")
-
-public class Role
+public class Country
 {
     @Id
-    @GeneratedValue
     private Long id;
-
-    private String name;
-
-    @ManyToMany(mappedBy = "roles")
-    private Set<User> users;
+    private @NotNull String name;
+    private @NotNull int real;
 }

@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.coin.app.dto.binance.MarketData;
 import com.coin.app.service.BinanceService;
+import com.coin.app.service.LiveScore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,9 +17,13 @@ public class MarketController
     @Autowired
     private BinanceService binanceService;
 
+    @Autowired
+    private LiveScore liveScore;
+
     @GetMapping("/marketData")
     public List<MarketData> marketData()
     {
+        liveScore.loadData();
         return binanceService.getMarketData();
     }
 }

@@ -8,7 +8,9 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToMany;
+import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.validation.constraints.NotNull;
 
@@ -43,6 +45,7 @@ public class Account
     @Enumerated(EnumType.STRING)
     private AccountStatus status;
 
-    @ManyToMany(mappedBy = "accounts")
+    @OneToMany
+    @JoinColumn(name = "account_id")
     private List<Form> forms;
 }

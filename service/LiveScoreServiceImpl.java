@@ -21,7 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class LiveScoreImpl implements LiveScore
+public class LiveScoreServiceImpl implements LiveScoreService
 {
     private static String root = "http://livescore-api.com/api-client/";
     private static String apiKey = ".json?key=8Tm4gJskBmOoLKfO";

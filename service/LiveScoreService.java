@@ -1,6 +1,6 @@
 package com.coin.app.service;
 
-public interface LiveScore
+public interface LiveScoreService
 {
     void loadData();
 }

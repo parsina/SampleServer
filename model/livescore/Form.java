@@ -1,5 +1,6 @@
 package com.coin.app.model.livescore;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -11,6 +12,7 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
+import javax.persistence.OneToMany;
 import javax.validation.constraints.NotNull;
 
 import com.coin.app.model.Account;
@@ -32,6 +34,8 @@ public class Form
 
     private @NotNull String name;
 
+    private String number;
+
     private @NotNull int score;
 
     private @NotNull long value;
@@ -39,9 +43,8 @@ public class Form
     @Enumerated(EnumType.STRING)
     private FormStatus status;
 
-    @ManyToMany
-    @JoinTable(name = "form_account", joinColumns = @JoinColumn(name = "form_id"), inverseJoinColumns = @JoinColumn(name = "account_id"))
-    private List<Account> accounts;
+    @Enumerated(EnumType.STRING)
+    private @NotNull FormType type;
 
     @ManyToMany
     @JoinTable(name = "form_match", joinColumns = @JoinColumn(name = "form_id"), inverseJoinColumns = @JoinColumn(name = "match_id"))
@@ -51,11 +54,12 @@ public class Form
     {
     }
 
-    public Form(@NotNull String name)
+    public Form(@NotNull String name , FormType type)
     {
         this.name = name;
         this.score = 0;
         this.value = 0L;
-        this.status = FormStatus.READY;
+        this.type = type;
+        this.matches = new ArrayList<>();
     }
 }

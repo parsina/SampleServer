@@ -41,13 +41,14 @@ public class Match
     private @NotNull boolean noWin = false;
     private @NotNull int score = 0;
     private @NotNull String location;
+    private @NotNull boolean includedInForm = false;
+
+    @ManyToMany(mappedBy = "matches")
+    List<Form> forms;
 
     @ManyToOne
     private @NotNull League league;
 
     @Enumerated(EnumType.STRING)
     private @NotNull MatchStatus status = MatchStatus.NOTSTARTED;
-
-    @ManyToMany(mappedBy = "matches")
-    private List<Form> forms;
 }

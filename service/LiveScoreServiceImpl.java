@@ -44,6 +44,16 @@ public class LiveScoreServiceImpl implements LiveScoreService
         loadMatches();
     }
 
+    @Override
+    public JsonArray getLiveScores()
+    {
+        String content = fetchContent(root + "scores/live.json" + apiKey + secretKey);
+        JsonObject jsonObject = toJsonObject(content);
+        if(jsonObject.get("success").getAsBoolean())
+            return jsonObject.get("data").getAsJsonObject().get("match").getAsJsonArray();
+        return null;
+    }
+
     private void loadCountries()
     {
         String content = fetchContent(root + "countries/list.json" + apiKey + secretKey);
@@ -66,7 +76,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
         }
     }
 
-    public void loadLeague()
+    private void loadLeague()
     {
         String content = fetchContent(root + "leagues/list.json" + apiKey + secretKey);
         JsonObject jsonObject = toJsonObject(content);
@@ -88,7 +98,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
         }
     }
 
-    public void loadMatches()
+    private void loadMatches()
     {
         for(int i=1 ; i < 10; i++)
         {
@@ -118,6 +128,8 @@ public class LiveScoreServiceImpl implements LiveScoreService
             }
         }
     }
+
+
 
     private static String fetchContent(String uri)
     {

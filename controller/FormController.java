@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Set;
 
 import com.coin.app.dto.data.ResultData;
+import com.coin.app.model.livescore.Form;
+import com.coin.app.model.livescore.FormStatus;
 import com.coin.app.model.livescore.FormType;
 import com.coin.app.service.FormService;
 import com.coin.app.service.LiveScoreService;
@@ -44,4 +46,17 @@ public class FormController
         formService.createForm(input.get("ids"), FormType.TEMPLATE);
         return null;
     }
+
+    @GetMapping("/formTemplates")
+    public List<ResultData> formTemplates()
+    {
+        return formService.findForms(FormType.TEMPLATE);
+    }
+
+    @PostMapping("/formTemplateData")
+    public ResultData formTemplateData(@RequestBody Map<String, Long> input)
+    {
+        return formService.findForm(input.get("id"));
+    }
+
 }

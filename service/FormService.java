@@ -9,7 +9,11 @@ import com.coin.app.model.livescore.FormType;
 
 public interface FormService
 {
+    ResultData findForm(Long formId);
+
     Form createForm(List<Long> matchIds, FormType type);
 
     List<ResultData> findAllFreeMatches(int priority);
+
+    List<ResultData> findForms(FormType type);
 }

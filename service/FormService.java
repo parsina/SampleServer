@@ -5,15 +5,15 @@ import java.util.Set;
 
 import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.livescore.Form;
-import com.coin.app.model.livescore.FormType;
+import reactor.core.publisher.Flux;
 
 public interface FormService
 {
-    ResultData findForm(Long formId);
+    ResultData findFormTemplate(Long formId);
 
-    Form createForm(List<Long> matchIds, FormType type);
+    List<ResultData>  createFormTemplate(List<Long> matchIds);
 
-    List<ResultData> findAllFreeMatches(int priority);
+    List<ResultData> findFormTemplates();
 
-    List<ResultData> findForms(FormType type);
+    Flux<ResultData> getFixtureFlux(ResultData resultData);
 }

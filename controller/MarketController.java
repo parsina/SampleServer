@@ -23,7 +23,6 @@ public class MarketController
     @GetMapping("/marketData")
     public List<MarketData> marketData()
     {
-        liveScoreService.loadData();
         return binanceService.getMarketData();
     }
 }

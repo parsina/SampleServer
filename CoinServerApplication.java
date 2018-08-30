@@ -1,7 +1,6 @@
 package com.coin.app;
 
-import java.util.stream.Stream;
-
+import com.coin.app.service.BackgroundJobsService;
 import com.coin.app.service.BitcoinJService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationRunner;
@@ -15,7 +14,11 @@ import org.springframework.context.annotation.ComponentScan;
 public class CoinServerApplication
 {
     @Autowired
-    BitcoinJService bitcoinJService;
+    private BitcoinJService bitcoinJService;
+
+    @Autowired
+    private BackgroundJobsService backgroundJobsService;
+
 //
 //    @Autowired
 //    UserService userService;
@@ -76,6 +79,7 @@ public class CoinServerApplication
     ApplicationRunner init()
     {
         bitcoinJService.initialize();
+//        backgroundJobsService.initialize();
 
 //        User user = userService.createUser("User", "01", "user01@coinnet.net", "123123");
 //        if(user.getStatus().equals(UserStatus.INACTIVE))
@@ -89,7 +93,9 @@ public class CoinServerApplication
 //        bitcoinJService.startCoinReceiveListener(user.getAccount());
 
 //        binanceAPI();
-        return args -> {};
+        return args ->
+        {
+        };
     }
 
 //    private void binanceAPI()

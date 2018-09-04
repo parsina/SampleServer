@@ -15,5 +15,5 @@ public interface FormService
 
     List<ResultData> findFormTemplates();
 
-    Flux<ResultData> getFixtureFlux(ResultData resultData);
+    ResultData getUpdatedFixturesData();
 }

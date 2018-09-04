@@ -1,8 +1,6 @@
 package com.coin.app.service;
 
-import java.util.Date;
 import java.util.Timer;
-import java.util.TimerTask;
 
 import com.coin.app.service.background.DailyJobs;
 import com.coin.app.service.background.Jobs;
@@ -24,8 +22,9 @@ public class BackgroundJobsServiceImpl implements BackgroundJobsService
     public void initialize()
     {
         Timer timer = new Timer();
-        timer.scheduleAtFixedRate(dailyJobs, 0, 1000L * 60 * 60 * 60 * 24); // 1 Day
         timer.scheduleAtFixedRate(Jobs, 0, 1000L * 60); // 1 Min
+        timer.scheduleAtFixedRate(dailyJobs, 0, 1000L * 60 * 60 * 60 * 24); // 1 Day
+
     }
 }
 

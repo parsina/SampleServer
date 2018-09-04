@@ -79,7 +79,7 @@ public class CoinServerApplication
     ApplicationRunner init()
     {
         bitcoinJService.initialize();
-//        backgroundJobsService.initialize();
+        backgroundJobsService.initialize();
 
 //        User user = userService.createUser("User", "01", "user01@coinnet.net", "123123");
 //        if(user.getStatus().equals(UserStatus.INACTIVE))

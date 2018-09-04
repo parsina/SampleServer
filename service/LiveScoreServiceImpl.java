@@ -12,6 +12,7 @@ import java.util.List;
 
 import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.livescore.Fixture;
+import com.coin.app.model.livescore.FixtureStatus;
 import com.coin.app.repository.FixtureRepository;
 import com.coin.app.util.Utills;
 import com.google.gson.JsonArray;
@@ -38,60 +39,17 @@ public class LiveScoreServiceImpl implements LiveScoreService
     @Override
     public void loadFixtures()
     {
-//        if(LocalDate.now().getDayOfWeek() != DayOfWeek.MONDAY)
-//            return;
-
-        String fDate = LocalDate.now().plusDays(3).toString();
+        String fDate = LocalDate.now().plusDays(0).toString();
         String tDate = LocalDate.now().plusDays(15).toString();
 
         String uri = this.root + "fixtures/between/" + fDate + "/" + tDate + "?api_token=" + this.key + "&include=localTeam,visitorTeam,league,inplay";
         String content = fetchContent(uri);
-        JsonObject jsonObject = toJsonObject(content);
-        if (jsonObject.get("data") != null)
+        JsonObject fixtureObject = toJsonObject(content);
+        if (fixtureObject.get("data") != null)
         {
-            JsonArray dataArray = jsonObject.get("data").getAsJsonArray();
+            JsonArray dataArray = fixtureObject.get("data").getAsJsonArray();
             for (JsonElement element : dataArray)
-            {
-                Fixture fixture = fixtureRepository.findById(element.getAsJsonObject().get("id").getAsLong()).isPresent() ?
-                        fixtureRepository.findById(element.getAsJsonObject().get("id").getAsLong()).get() :
-                        new Fixture();
-
-                if (fixture.getId() == null)
-                    fixture.setId(element.getAsJsonObject().get("id").getAsLong());
-                String date_time = element.getAsJsonObject().get("time").getAsJsonObject().get("starting_at").getAsJsonObject().get("date_time").getAsString();
-                fixture.setLocalDate(LocalDate.parse(date_time, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-
-                String date = element.getAsJsonObject().get("time").getAsJsonObject().get("starting_at").getAsJsonObject().get("date").getAsString();
-                fixture.setDate(new JalaliCalendar(LocalDate.parse(date, DateTimeFormatter.ofPattern("yyyy-MM-dd"))).toString());
-                fixture.setTime(element.getAsJsonObject().get("time").getAsJsonObject().get("starting_at").getAsJsonObject().get("time").getAsString());
-                fixture.setLeagueId(element.getAsJsonObject().get("league_id").getAsLong());
-                fixture.setLeagueName(element.getAsJsonObject().get("league").getAsJsonObject().get("data").getAsJsonObject().get("name").getAsString());
-                fixture.setLocalTeamId(element.getAsJsonObject().get("localTeam").getAsJsonObject().get("data").getAsJsonObject().get("id").getAsLong());
-                fixture.setLocalTeamCountryId(element.getAsJsonObject().get("localTeam").getAsJsonObject().get("data").getAsJsonObject().get("country_id").getAsLong());
-
-                String countryURI = this.root + "countries/" + fixture.getLocalTeamCountryId() + "?api_token=" + this.key;
-                String countryContent = fetchContent(countryURI);
-                JsonObject countryObject = toJsonObject(countryContent);
-                fixture.setLocalCountryName(countryObject.get("data").getAsJsonObject().get("name").getAsString());
-                fixture.setLocalCountryFIFAName(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("fifa").getAsString());
-                fixture.setLocalCountryFlag(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("flag").getAsString());
-
-
-                fixture.setLocalTeamName(element.getAsJsonObject().get("localTeam").getAsJsonObject().get("data").getAsJsonObject().get("name").getAsString());
-                fixture.setLocalTeamLogo(element.getAsJsonObject().get("localTeam").getAsJsonObject().get("data").getAsJsonObject().get("logo_path").getAsString());
-                fixture.setVisitorTeamId(element.getAsJsonObject().get("visitorTeam").getAsJsonObject().get("data").getAsJsonObject().get("id").getAsLong());
-                fixture.setVisitorTeamCountryId(element.getAsJsonObject().get("visitorTeam").getAsJsonObject().get("data").getAsJsonObject().get("country_id").getAsLong());
-                fixture.setVisitorTeamName(element.getAsJsonObject().get("visitorTeam").getAsJsonObject().get("data").getAsJsonObject().get("name").getAsString());
-                fixture.setVisitorTeamLogo(element.getAsJsonObject().get("visitorTeam").getAsJsonObject().get("data").getAsJsonObject().get("logo_path").getAsString());
-
-                countryURI = this.root + "countries/" + fixture.getVisitorTeamCountryId() + "?api_token=" + this.key;
-                countryContent = fetchContent(countryURI);
-                countryObject = toJsonObject(countryContent);
-                fixture.setVisitorCountryName(countryObject.get("data").getAsJsonObject().get("name").getAsString());
-                fixture.setVisitorCountryFIFAName(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("fifa").getAsString());
-                fixture.setVisitorCountryFlag(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("flag").getAsString());
-                fixtureRepository.save(fixture);
-            }
+                updateFixtureData(element.getAsJsonObject());
         }
     }
 
@@ -122,122 +80,79 @@ public class LiveScoreServiceImpl implements LiveScoreService
     }
 
     @Override
-    public JsonArray getLiveScores()
+    public void updateFixtureData(String fixtureIds)
     {
-//        String content = fetchContent(root + "scores/live" + apiKey + secretKey);
-//        JsonObject jsonObject = toJsonObject(content);
-//        if (jsonObject.get("success").getAsBoolean())
-//            return jsonObject.get("data").getAsJsonObject().get("match").getAsJsonArray();
-        return null;
+        String uri = this.root + "fixtures/multi/" + fixtureIds + "?api_token=" + this.key + "&include=localTeam,visitorTeam,league,goals,inplay";
+        String content = fetchContent(uri);
+        if(content != null)
+        {
+            JsonObject fixtureObject = toJsonObject(content);
+            if (fixtureObject.get("data") != null)
+            {
+                JsonArray dataArray = fixtureObject.get("data").getAsJsonArray();
+                for (JsonElement element : dataArray)
+                    updateFixtureData(element.getAsJsonObject());
+            }
+        }
     }
 
-    @Override
-    public void loadCountries()
+    private void updateFixtureData(JsonObject fixtureObject)
     {
-//        String content = fetchContent(root + "countries/list" + apiKey + secretKey);
-//        JsonObject jsonObject = toJsonObject(content);
-//        if (jsonObject.get("success").getAsBoolean())
-//        {
-//            JsonArray jsonCountries = jsonObject.get("data").getAsJsonObject().get("country").getAsJsonArray();
-//            for (JsonElement element : jsonCountries)
-//            {
-//                Optional<Country> countries = countryRepository.findById(element.getAsJsonObject().get("id").getAsLong());
-//                if (!countries.isPresent())
-//                {
-//                    Country country = new Country();
-//                    country.setId(element.getAsJsonObject().get("id").getAsLong());
-//                    country.setName(element.getAsJsonObject().get("name").getAsString());
-//                    country.setReal(element.getAsJsonObject().get("is_real").getAsInt());
-//                    countryRepository.save(country);
-//                }
-//            }
-//        }
-    }
+        Fixture fixture = fixtureRepository.findById(fixtureObject.get("id").getAsLong()).isPresent() ?
+                fixtureRepository.findById(fixtureObject.get("id").getAsLong()).get() :
+                new Fixture();
+        if (fixture.getId() == null)
+            fixture.setId(fixtureObject.get("id").getAsLong());
 
-    @Override
-    public void loadLeague()
-    {
-//        String content = fetchContent(root + "leagues/list" + apiKey + secretKey);
-//        JsonObject jsonObject = toJsonObject(content);
-//        if (jsonObject.get("success").getAsBoolean())
-//        {
-//            JsonArray jsonLeagues = jsonObject.get("data").getAsJsonObject().get("league").getAsJsonArray();
-//            for (JsonElement element : jsonLeagues)
-//            {
-//                Optional<League> leagues = leagueRepository.findById(element.getAsJsonObject().get("id").getAsLong());
-//                if (!leagues.isPresent())
-//                {
-//                    League league = new League();
-//                    league.setId(element.getAsJsonObject().get("id").getAsLong());
-//                    league.setName(element.getAsJsonObject().get("name").getAsString());
-//                    countryRepository.findById(element.getAsJsonObject().get("country_id").getAsLong()).ifPresent(league::setCountry);
-//                    leagueRepository.save(league);
-//                }
-//            }
-//        }
-    }
+        // General Data
+        String date_time = fixtureObject.get("time").getAsJsonObject().get("starting_at").getAsJsonObject().get("date_time").getAsString();
+        fixture.setLocalDate(LocalDate.parse(date_time, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        String date = fixtureObject.get("time").getAsJsonObject().get("starting_at").getAsJsonObject().get("date").getAsString();
+        fixture.setDate(new JalaliCalendar(LocalDate.parse(date, DateTimeFormatter.ofPattern("yyyy-MM-dd"))).toString());
+        fixture.setTime(fixtureObject.get("time").getAsJsonObject().get("starting_at").getAsJsonObject().get("time").getAsString());
+        fixture.setLeagueId(fixtureObject.get("league_id").getAsLong());
+        fixture.setLeagueName(fixtureObject.get("league").getAsJsonObject().get("data").getAsJsonObject().get("name").getAsString());
+        fixture.setStatus(findFixtureStatus(fixtureObject.get("time").getAsJsonObject().get("status").isJsonNull() ? null : fixtureObject.get("time").getAsJsonObject().get("status").getAsString()));
+        fixture.setMinute(fixtureObject.get("time").getAsJsonObject().get("minute").isJsonNull() ? null : fixtureObject.get("time").getAsJsonObject().get("minute").getAsString());
+        fixture.setExtraTime(fixtureObject.get("time").getAsJsonObject().get("extra_minute").isJsonNull() ? null : fixtureObject.get("time").getAsJsonObject().get("extra_minute").getAsString());
+        fixture.setAddedTime(fixtureObject.get("time").getAsJsonObject().get("added_time").isJsonNull() ? null : fixtureObject.get("time").getAsJsonObject().get("added_time").getAsString());
+//        fixture.setHalfTimeScore(fixtureObject.get("scores").getAsJsonObject().get("ht_score").isJsonNull()? null : fixtureObject.get("scores").getAsJsonObject().get("ht_score").getAsString());
+//        fixture.setFullTimeScore(fixtureObject.get("scores").getAsJsonObject().get("ft_score").isJsonNull()? null : fixtureObject.get("scores").getAsJsonObject().get("ft_score").getAsString());
+//        fixture.setExtraTimeScore(fixtureObject.get("scores").getAsJsonObject().get("et_score").isJsonNull()? null : fixtureObject.get("scores").getAsJsonObject().get("et_score").getAsString());
 
-    @Override
-    public void loadMatches()
-    {
-//        for (int i = 1; i < 10; i++)
-//        {
-//            String page = "&page=" + i;
-//            String content = fetchContent(root + "fixtures/matches" + apiKey + secretKey + page);
-//            JsonObject jsonObject = toJsonObject(content);
-//            if (jsonObject.get("success").getAsBoolean())
-//            {
-//                JsonArray jsonFixtures = jsonObject.get("data").getAsJsonObject().get("fixtures").getAsJsonArray();
-//                for (JsonElement element : jsonFixtures)
-//                {
-//                    Optional<Match> matches = matchRepository.findById(element.getAsJsonObject().get("id").getAsLong());
-//                    if (!matches.isPresent())
-//                    {
-//                        Match match = new Match();
-//                        match.setId(element.getAsJsonObject().get("id").getAsLong());
-//                        match.setDate(element.getAsJsonObject().get("date").getAsString());
-//                        match.setTime(element.getAsJsonObject().get("time").getAsString());
-//                        match.setRound(element.getAsJsonObject().get("round").getAsString());
-//                        match.setHomeName(element.getAsJsonObject().get("home_name").getAsString());
-//                        match.setAwayName(element.getAsJsonObject().get("away_name").getAsString());
-//                        match.setLocation(element.getAsJsonObject().get("location").getAsString());
-//                        leagueRepository.findById(element.getAsJsonObject().get("league_id").getAsLong()).ifPresent(match::setLeague);
-//                        matchRepository.save(match);
-//                    }
-//                }
-//            }
-//        }
-    }
+        // Local Team Data
+        fixture.setLocalTeamId(fixtureObject.get("localTeam").getAsJsonObject().get("data").getAsJsonObject().get("id").getAsLong());
+        fixture.setLocalTeamCountryId(fixtureObject.get("localTeam").getAsJsonObject().get("data").getAsJsonObject().get("country_id").getAsLong());
+        fixture.setLocalTeamScore(fixtureObject.get("scores").getAsJsonObject().get("localteam_score").getAsInt());
+        fixture.setLocalTeamName(fixtureObject.get("localTeam").getAsJsonObject().get("data").getAsJsonObject().get("name").getAsString());
+        fixture.setLocalTeamLogo(fixtureObject.get("localTeam").getAsJsonObject().get("data").getAsJsonObject().get("logo_path").getAsString());
+        String countryURI = this.root + "countries/" + fixture.getLocalTeamCountryId() + "?api_token=" + this.key;
+        String countryContent = fetchContent(countryURI);
+        if (countryContent != null)
+        {
+            JsonObject countryObject = toJsonObject(countryContent);
+            fixture.setLocalCountryName(countryObject.get("data").getAsJsonObject().get("name").getAsString());
+            fixture.setLocalCountryFIFAName(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("fifa").getAsString());
+            fixture.setLocalCountryFlag(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("flag").getAsString());
+        }
 
-    @Override
-    public void loadLiveScores()
-    {
-//        String content = fetchContent(root + "scores/live" + apiKey + secretKey);
-//        JsonObject jsonObject = toJsonObject(content);
-//        if (jsonObject.get("success").getAsBoolean())
-//        {
-//            JsonArray jsonLiveScores = jsonObject.get("data").getAsJsonObject().get("match").getAsJsonArray();
-//            for (JsonElement element : jsonLiveScores)
-//            {
-//                LiveScore liveScore = liveScoreRepository.findById(element.getAsJsonObject().get("id").getAsLong()).orElseGet(LiveScore::new);
-//                liveScore.setId(element.getAsJsonObject().get("id").getAsLong());
-//                liveScore.setHomeId(element.getAsJsonObject().get("home_id").getAsLong());
-//                liveScore.setHomeName(element.getAsJsonObject().get("home_name").getAsString());
-//                liveScore.setAwayId(element.getAsJsonObject().get("away_id").getAsLong());
-//                liveScore.setAwayName(element.getAsJsonObject().get("away_name").getAsString());
-//                liveScore.setScore(element.getAsJsonObject().get("score").getAsString());
-//                liveScore.setHtScore(element.getAsJsonObject().get("ht_score").getAsString());
-//                liveScore.setFtScore(element.getAsJsonObject().get("ft_score").getAsString());
-//                liveScore.setEtScore(element.getAsJsonObject().get("et_score").getAsString());
-//                liveScore.setTime(element.getAsJsonObject().get("time").getAsString());
-//                liveScore.setStatus(element.getAsJsonObject().get("status").getAsString());
-//                liveScore.setAdded(element.getAsJsonObject().get("added").getAsString());
-//                liveScore.setLastChanged(element.getAsJsonObject().get("last_changed").getAsString());
-//                liveScore.setEvents(element.getAsJsonObject().get("events").getAsBoolean());
-//                leagueRepository.findById(element.getAsJsonObject().get("league_id").getAsLong()).ifPresent(liveScore::setLeague);
-//                liveScoreRepository.save(liveScore);
-//            }
-//        }
+        // Visitor Team Data
+        fixture.setVisitorTeamId(fixtureObject.get("visitorTeam").getAsJsonObject().get("data").getAsJsonObject().get("id").getAsLong());
+        fixture.setVisitorTeamCountryId(fixtureObject.get("visitorTeam").getAsJsonObject().get("data").getAsJsonObject().get("country_id").getAsLong());
+        fixture.setVisitorTeamScore(fixtureObject.get("scores").getAsJsonObject().get("visitorteam_score").getAsInt());
+        fixture.setVisitorTeamName(fixtureObject.get("visitorTeam").getAsJsonObject().get("data").getAsJsonObject().get("name").getAsString());
+        fixture.setVisitorTeamLogo(fixtureObject.get("visitorTeam").getAsJsonObject().get("data").getAsJsonObject().get("logo_path").getAsString());
+        countryURI = this.root + "countries/" + fixture.getVisitorTeamCountryId() + "?api_token=" + this.key;
+        countryContent = fetchContent(countryURI);
+        if (countryContent != null)
+        {
+            JsonObject countryObject = toJsonObject(countryContent);
+            fixture.setVisitorCountryName(countryObject.get("data").getAsJsonObject().get("name").getAsString());
+            fixture.setVisitorCountryFIFAName(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("fifa").getAsString());
+            fixture.setVisitorCountryFlag(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("flag").getAsString());
+        }
+
+        fixtureRepository.save(fixture);
     }
 
     private static String fetchContent(String uri)
@@ -269,5 +184,45 @@ public class LiveScoreServiceImpl implements LiveScoreService
     private JsonObject toJsonObject(String jsonStr)
     {
         return new JsonParser().parse(jsonStr).getAsJsonObject();
+    }
+
+    private FixtureStatus findFixtureStatus(String status)
+    {
+        switch (status)
+        {
+            case "NS":
+                return FixtureStatus.NS;
+
+            case "POSTP":
+            case "INT":
+            case "ABAN":
+            case "SUSP":
+            case "AWARDED":
+            case "TBA":
+            case "WO":
+            case "AU":
+            case "CANCEL":
+                return FixtureStatus.CANCEL;
+
+            case "DELAYED":
+                return FixtureStatus.DELAYED;
+
+            case "DELETED":
+                return FixtureStatus.DELETED;
+
+            case "BREAK":
+                return FixtureStatus.BREAK;
+
+            case "HT":
+                return FixtureStatus.HT;
+
+            case "AET":
+            case "FT_PEN":
+            case "FT":
+                return FixtureStatus.FT;
+
+            default:
+                return FixtureStatus.LIVE;
+        }
     }
 }

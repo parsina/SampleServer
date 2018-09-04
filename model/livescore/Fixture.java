@@ -5,6 +5,8 @@ import java.util.Date;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
@@ -66,7 +68,9 @@ public class Fixture
     private int fullTimeScore;
     private int extraTimeScore;
 
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private @NotNull FixtureStatus status;
+
     private LocalDate localDate;
     private String date;
     private String time;

@@ -11,13 +11,6 @@ public interface LiveScoreService
 
     List<ResultData> findAllFreeFixtures();
 
-    JsonArray getLiveScores();
+    void updateFixtureData(String fixtureIds);
 
-    void loadCountries();
-
-    void loadLeague();
-
-    void loadMatches();
-
-    void loadLiveScores();
 }

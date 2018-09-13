@@ -2,7 +2,7 @@ package com.coin.app.model.livescore;
 
 public enum FormStatus
 {
-    REGISTERED,     // Filed by user
+    REGISTERED,     // Filled by trader
     FINALIZE,       // Ready for competition
     PASSED          // All matches are passed
 }

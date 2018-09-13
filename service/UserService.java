@@ -13,6 +13,8 @@ public interface UserService
 
     ResultData login(String email, String password);
 
+    boolean isAuthenticated(Long userId);
+
     User activateUser(User user);
 
     void save(User user);

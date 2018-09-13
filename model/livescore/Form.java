@@ -1,21 +1,18 @@
 package com.coin.app.model.livescore;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
+import javax.persistence.Access;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.validation.constraints.NotNull;
 
+import com.coin.app.model.Account;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,7 +22,6 @@ import lombok.ToString;
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor
 @EqualsAndHashCode
 @ToString
 public class Form
@@ -36,9 +32,9 @@ public class Form
 
     private @NotNull String name;
 
-    private @NotNull String cratedDate;
+    private @NotNull LocalDate cratedDate;
 
-    private @NotNull String cratedTime;
+    private @NotNull LocalTime cratedTime;
 
     private @NotNull int score;
 
@@ -49,4 +45,18 @@ public class Form
 
     @ManyToOne
     private @NotNull FormTemplate formTemplate;
+
+    @ManyToOne
+    private @NotNull Account account;
+
+    public Form(@NotNull String name, @NotNull LocalDate cratedDate, @NotNull LocalTime cratedTime, FormStatus status, @NotNull FormTemplate formTemplate)
+    {
+        this.name = name;
+        this.cratedDate = cratedDate;
+        this.cratedTime = cratedTime;
+        this.status = status;
+        this.formTemplate = formTemplate;
+        this.score = 0;
+        this.value = 0;
+    }
 }

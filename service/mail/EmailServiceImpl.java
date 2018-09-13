@@ -1,8 +1,5 @@
 package com.coin.app.service.mail;
 
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
-
 import com.coin.app.model.User;
 import com.coin.app.service.AccountService;
 import com.coin.app.service.UserService;
@@ -37,7 +34,7 @@ public class EmailServiceImpl implements EmailService
         userService.saveUser(user);
 
         String message = "لطفا جهت تایید ایمیل و فعال سازی حساب خود بر روی لینک زیر کلیک نمایید: " ;
-        String link = "http://localhost:4200/confirm?token=" + user.getConfirmationToken();
+        String link = "http://localhost:4200/confirmRegistration?token=" + user.getConfirmationToken();
 
         MimeMessagePreparator messagePreparator = mimeMessage ->
         {

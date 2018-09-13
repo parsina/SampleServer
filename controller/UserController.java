@@ -5,9 +5,10 @@ import java.util.Map;
 
 import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.User;
-import com.coin.app.service.mail.EmailService;
 import com.coin.app.service.UserService;
+import com.coin.app.service.mail.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,25 +18,20 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequestMapping("/auth")
 @CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
-@RequestMapping({"/api"})
 public class UserController
 {
+    @Autowired
     private UserService userService;
-    private EmailService emailService;
 
     @Autowired
-    public UserController(UserService userService, EmailService emailService)
-    {
-        this.userService = userService;
-        this.emailService = emailService;
-    }
+    private EmailService emailService;
 
-    @PostMapping("/register")
+    @PostMapping("/signUp")
     public ResultData create(@RequestBody Map<String, ?> input)
     {
         return userService.createUser(input.get("username").toString(), input.get("pass").toString(), input.get("reppass").toString());
@@ -47,14 +43,14 @@ public class UserController
         emailService.sendActivationLink(input.get("email").toString());
     }
 
-    @PostMapping("/confirm")
+    @PostMapping("/confirmActivationToken")
     public ResultData confirmUser(@RequestBody Map<String, ?> input)
     {
         return userService.confirmRegistration(input.get("token").toString());
     }
 
-    @PostMapping("/authenticate")
-    public ResultData login(@RequestBody Map<String, ?> input)
+    @PostMapping("/login")
+    public ResultData login(@RequestBody Map<String, ?> input) throws AuthenticationException
     {
         return userService.login(input.get("username").toString(), input.get("password").toString());
     }

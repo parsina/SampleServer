@@ -1,35 +1,51 @@
 package com.coin.app.service;
 
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
+import com.coin.app.common.DeviceProvider;
 import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.User;
+import com.coin.app.model.enums.UserRole;
 import com.coin.app.model.enums.UserStatus;
-import com.coin.app.repository.RoleRepository;
 import com.coin.app.repository.UserRepository;
+import com.coin.app.security.JwtTokenProvider;
+import com.coin.app.security.UserPrincipal;
+import com.coin.app.security.payload.JwtAuthenticationResponse;
 import com.coin.app.service.mail.EmailService;
 import com.coin.app.util.Validator;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 public class UserServiceImpl implements UserService
 {
     @Autowired
-    UserRepository userRepository;
+    private UserRepository userRepository;
 
     @Autowired
-    private RoleRepository roleRepository;
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private BCryptPasswordEncoder bCryptPasswordEncoder;
+    private EmailService emailService;
 
     @Autowired
-    EmailService emailService;
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     @Override
     public ResultData createUser(String email, String password, String repeatedPassword)
@@ -61,14 +77,14 @@ public class UserServiceImpl implements UserService
             user.setCreatedDate(new Date());
             user.setParentId(-1L);
             user.setEmail(email.toLowerCase());
-            user.setPassword(bCryptPasswordEncoder.encode(password));
+            user.setPassword(passwordEncoder.encode(password));
             user.setStatus(UserStatus.INACTIVE);
+            user.setRole(UserRole.ROLE_USER);
             user.setConfirmationToken(UUID.randomUUID().toString());
             userRepository.save(user);
             result.setSuccess(true);
             result.setMessage("User Created !");
             result.addProperty("userEmail", user.getEmail());
-
         }
         return result;
     }
@@ -78,11 +94,11 @@ public class UserServiceImpl implements UserService
         ResultData result = new ResultData(false, "");
 
         User user = userRepository.findByConfirmationToken(token);
-        if(user != null)
+        if (user != null)
         {
-            if(user.getStatus().equals(UserStatus.ACTIVE))
+            if (user.getStatus().equals(UserStatus.ACTIVE))
             {
-                result.setMessage("User Is Activated before");
+                result.setMessage("User is enabled before");
                 return result;
             }
 
@@ -101,36 +117,38 @@ public class UserServiceImpl implements UserService
     {
         ResultData result = new ResultData(false, "");
         User user = userRepository.findByEmail(email);
-        if(user == null)
+        if (user == null)
         {
-            result.setMessage("Username is incorrect !");
+            result.setMessage("Email is incorrect !");
             return result;
-        }
-        else
-        if(user.getStatus().equals(UserStatus.INACTIVE))
+        } else if (user.getStatus().equals(UserStatus.INACTIVE))
         {
             result.setMessage("User is not Active");
             return result;
-        }
-        else
-        if(user.getStatus().equals(UserStatus.DELETED))
+        } else if (user.getStatus().equals(UserStatus.DELETED))
         {
             result.setMessage("User is Deleted");
             return result;
-        }
-        else
-        if(!bCryptPasswordEncoder.matches(password, user.getPassword()))
+        } else if (!passwordEncoder.matches(password, user.getPassword()))
         {
             result.setMessage("Password is incorrect !");
             return result;
-        }
-        else
+        } else
         {
+            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email,password));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            String jwt = jwtTokenProvider.generateToken(authentication);
+//            return ResponseEntity.ok(new JwtAuthenticationResponse(jwt));
+
+
             result.setSuccess(true);
             result.setMessage("User loged in !");
             result.addProperty("id", user.getId());
             result.addProperty("email", user.getEmail());
+            result.addProperty("role", user.getRole());
             result.addProperty("info", user.getUserInfo());
+            result.addProperty("token", jwt);
         }
         return result;
     }
@@ -138,6 +156,15 @@ public class UserServiceImpl implements UserService
     public User findByConfirmationToken(String confirmationToken)
     {
         return userRepository.findByConfirmationToken(confirmationToken);
+    }
+
+    @Override
+    public boolean isAuthenticated(Long userId)
+    {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth.isAuthenticated() && ((UserPrincipal)auth.getPrincipal()).getId().equals(userId))
+            return true;
+        return false;
     }
 
     @Override
@@ -151,7 +178,6 @@ public class UserServiceImpl implements UserService
     public void save(User user)
     {
 //        user.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
-        user.setRoles(new HashSet<>(roleRepository.findAll()));
         userRepository.save(user);
     }
 

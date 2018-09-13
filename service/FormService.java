@@ -13,7 +13,11 @@ public interface FormService
 
     List<ResultData>  createFormTemplate(List<Long> matchIds);
 
+    ResultData  createForm(Long formTemplateId, Long userId, List<ResultData> matchesData);
+
     List<ResultData> findFormTemplates();
 
     ResultData getUpdatedFixturesData();
+
+    List<ResultData>  createOrUpdateForm(List<ResultData> formData);
 }

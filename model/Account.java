@@ -44,8 +44,4 @@ public class Account
 
     @Enumerated(EnumType.STRING)
     private AccountStatus status;
-
-    @OneToMany
-    @JoinColumn(name = "account_id")
-    private List<Form> forms;
 }

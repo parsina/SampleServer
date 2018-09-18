@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,10 +21,9 @@ import com.coin.app.repository.FormRepository;
 import com.coin.app.repository.FormTemplateRepository;
 import com.coin.app.repository.MatchRepository;
 import com.coin.app.util.Utills;
-import com.sun.org.apache.xpath.internal.operations.Bool;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -58,7 +58,7 @@ public class FormServiceImpl implements FormService
         resultData.addProperty("name", formTemplate.getName());
         resultData.addProperty("value", formTemplate.getTotalValue());
         List<Fixture> fixtures = fixtureRepository.findByFormTemplateOrderByDateAscTimeAsc(formTemplateRepository.findById(formId).get());
-        resultData.addProperty("matches", getMatchData(fixtures));
+        resultData.addProperty("matches", getFixtureData(fixtures));
         return resultData;
     }
 
@@ -82,48 +82,48 @@ public class FormServiceImpl implements FormService
     {
         ResultData resultData = new ResultData(false, "");
 
-        if(userService.isAuthenticated(userId))
+        if (userService.isAuthenticated(userId))
         {
             int counter = 0;
             for (Object matchData : matchesData)
             {
                 Map data = ((Map) ((LinkedHashMap) matchData).get("properties"));
-                if(data.get("homeWin") == null || data.get("awayWin") == null || data.get("noWin") == null)
+                if (data.get("homeWin") == null || data.get("awayWin") == null || data.get("noWin") == null)
                 {
                     resultData.setMessage("Null in row data");
                     return resultData;
                 }
 
-                if(!Boolean.valueOf(data.get("homeWin").toString()) && !Boolean.valueOf(data.get("awayWin").toString()) && !Boolean.valueOf(data.get("noWin").toString()))
+                if (!Boolean.valueOf(data.get("homeWin").toString()) && !Boolean.valueOf(data.get("awayWin").toString()) && !Boolean.valueOf(data.get("noWin").toString()))
                 {
                     resultData.setMessage("Not selected data for all rows");
                     return resultData;
                 }
 
-                if(data.get("homeWin") != null && Boolean.valueOf(data.get("homeWin").toString()))
+                if (data.get("homeWin") != null && Boolean.valueOf(data.get("homeWin").toString()))
                     counter++;
-                if(data.get("awayWin") != null && Boolean.valueOf(data.get("awayWin").toString()))
+                if (data.get("awayWin") != null && Boolean.valueOf(data.get("awayWin").toString()))
                     counter++;
-                if(data.get("noWin") != null && Boolean.valueOf(data.get("noWin").toString()))
+                if (data.get("noWin") != null && Boolean.valueOf(data.get("noWin").toString()))
                     counter++;
             }
 
             Long value = 100L;
-            if(counter > 10)
+            if (counter > 10)
             {
                 for (int i = 0; i < counter - 10; i++)
                     value = value * 2;
             }
 
             FormTemplate formTemplate = formTemplateRepository.findById(formTemplateId).get();
-            Form form = new Form(String.valueOf(formRepository.count() + 1 ), LocalDate.now(ZoneId.of("Asia/Tehran")), LocalTime.now(ZoneId.of("Asia/Tehran")), FormStatus.REGISTERED, formTemplate);
+            Form form = new Form(String.valueOf(formRepository.count() + 1), LocalDate.now(ZoneId.of("Asia/Tehran")), LocalTime.now(ZoneId.of("Asia/Tehran")), FormStatus.REGISTERED, formTemplate);
             form.setValue(value);
             form.setAccount(userService.findById(userId).getAccount());
             formRepository.save(form);
 
             for (Object matchData : matchesData)
             {
-                Map data = ((Map)((LinkedHashMap) matchData).get("properties"));
+                Map data = ((Map) ((LinkedHashMap) matchData).get("properties"));
                 Match match = new Match();
                 match.setFixtureId((Long.valueOf(data.get("id").toString())));
                 match.setLocalWin(data.get("homeWin") == null ? false : Boolean.valueOf(data.get("homeWin").toString()));
@@ -137,9 +137,72 @@ public class FormServiceImpl implements FormService
             resultData.setSuccess(true);
             resultData.setMessage("Form is submitted !");
             return resultData;
-        }
-        else
+        } else
             resultData.setMessage("User is not allowed to create form !");
+        return resultData;
+    }
+
+    @Override
+    public ResultData updateForm(Long formId, Long userId, List<ResultData> matchesData)
+    {
+        ResultData resultData = new ResultData(false, "");
+
+        if (userService.isAuthenticated(userId))
+        {
+            int counter = 0;
+            for (Object matchData : matchesData)
+            {
+                Map data = ((Map) ((LinkedHashMap) matchData).get("properties"));
+                if (data.get("homeWin") == null || data.get("awayWin") == null || data.get("noWin") == null)
+                {
+                    resultData.setMessage("Null in row data");
+                    return resultData;
+                }
+
+                if (!Boolean.valueOf(data.get("homeWin").toString()) && !Boolean.valueOf(data.get("awayWin").toString()) && !Boolean.valueOf(data.get("noWin").toString()))
+                {
+                    resultData.setMessage("Not selected data for all rows");
+                    return resultData;
+                }
+
+                if (data.get("homeWin") != null && Boolean.valueOf(data.get("homeWin").toString()))
+                    counter++;
+                if (data.get("awayWin") != null && Boolean.valueOf(data.get("awayWin").toString()))
+                    counter++;
+                if (data.get("noWin") != null && Boolean.valueOf(data.get("noWin").toString()))
+                    counter++;
+            }
+
+            Long value = 100L;
+            if (counter > 10)
+            {
+                for (int i = 0; i < counter - 10; i++)
+                    value = value * 2;
+            }
+
+            Form form = formRepository.findById(formId).get();
+            form.setValue(value);
+            formRepository.save(form);
+            List<Match> matches = matchRepository.findByForm(form);
+
+            for (Object matchData : matchesData)
+            {
+                Map data = ((Map) ((LinkedHashMap) matchData).get("properties"));
+                for (Match match : matches)
+                    if (match.getFixtureId().equals(Long.valueOf(data.get("id").toString())))
+                    {
+                        match.setLocalWin(data.get("homeWin") == null ? false : Boolean.valueOf(data.get("homeWin").toString()));
+                        match.setVisitorWin(data.get("awayWin") == null ? false : Boolean.valueOf(data.get("awayWin").toString()));
+                        match.setNoWin(data.get("noWin") == null ? false : Boolean.valueOf(data.get("noWin").toString()));
+                        matchRepository.save(match);
+                    }
+            }
+
+            resultData.setSuccess(true);
+            resultData.setMessage("Form is submitted !");
+            return resultData;
+        } else
+            resultData.setMessage("User is not allowed to update form !");
         return resultData;
     }
 
@@ -151,7 +214,7 @@ public class FormServiceImpl implements FormService
         {
             ResultData result = new ResultData(true, "");
             result.addProperty("id", formTemplate.getId());
-            result.addProperty("name", formTemplate.getName());
+            result.addProperty("name", "مسابقه شماره " + formTemplate.getName());
             resultDataList.add(result);
         }
         return resultDataList;
@@ -161,11 +224,77 @@ public class FormServiceImpl implements FormService
     public ResultData getUpdatedFixturesData()
     {
         ResultData resultData = new ResultData(true, "");
-        resultData.addProperty("matches", getMatchData(fixtureRepository.findByUsedAndFormTemplateStatusOrderByDateAscTimeAsc(true, FormTemplateStatus.OPEN)));
+        resultData.addProperty("matches", getFixtureData(fixtureRepository.findByUsedAndFormTemplateStatusOrderByDateAscTimeAsc(true, FormTemplateStatus.OPEN)));
         return resultData;
     }
 
-    private List<ResultData> getMatchData(List<Fixture> fixtures)
+    @Override
+    public ResultData findUserForms(String type, String filter, String sortOrder, String sortBy, int pageNumber, int pageSize)
+    {
+        if (!userService.isAuthenticated(null))
+            return new ResultData(false, "User is not authenticated");
+        ResultData resultData = new ResultData(true, type + "Forms returns.");
+        List<FormStatus> formStatuses = new ArrayList<>();
+        switch (type)
+        {
+            case "ALL":
+                formStatuses.add(FormStatus.REGISTERED);
+                formStatuses.add(FormStatus.FINALIZED);
+                formStatuses.add(FormStatus.PASSED);
+                break;
+            case "ACTIVE":
+                formStatuses.add(FormStatus.REGISTERED);
+                formStatuses.add(FormStatus.FINALIZED);
+                break;
+            case "INACTIVE":
+                formStatuses.add(FormStatus.PASSED);
+                break;
+        }
+        List<Map> forms = new ArrayList<>();
+        if (sortBy.equals("templateName"))
+            sortBy = "formTemplate.name";
+        Sort orderBy = new Sort(sortOrder.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC, sortBy.isEmpty() ? "id" : sortBy);
+        for (Form form : formRepository.findByAccountAndStatusIsIn(userService.getCurrentUser().getAccount(), formStatuses, PageRequest.of(pageNumber, pageSize, orderBy)))
+        {
+            Map<String, Object> formMap = new HashMap<>();
+            formMap.put("id", form.getId());
+            formMap.put("name", "فرم شماره " + form.getName());
+            formMap.put("value", form.getValue());
+            formMap.put("score", form.getScore());
+            formMap.put("createdDate", Utills.nameDisplayForDate(form.getCreatedDate(), false));
+            formMap.put("createdTime", Utills.shortDisplayForTime(form.getCreatedTime().toString()));
+            formMap.put("status", form.getStatus());
+            formMap.put("templateId", form.getFormTemplate().getId());
+            formMap.put("templateName", "مسابقه شماره " + form.getFormTemplate().getName());
+            forms.add(formMap);
+        }
+        resultData.addProperty("forms", forms);
+        return resultData;
+    }
+
+    @Override
+    public Long getUserFormsSize(String type)
+    {
+        List<FormStatus> formStatuses = new ArrayList<>();
+        switch (type)
+        {
+            case "ALL":
+                formStatuses.add(FormStatus.REGISTERED);
+                formStatuses.add(FormStatus.FINALIZED);
+                formStatuses.add(FormStatus.PASSED);
+                break;
+            case "ACTIVE":
+                formStatuses.add(FormStatus.REGISTERED);
+                formStatuses.add(FormStatus.FINALIZED);
+                break;
+            case "INACTIVE":
+                formStatuses.add(FormStatus.PASSED);
+                break;
+        }
+        return formRepository.countByAccountAndStatusIn(userService.getCurrentUser().getAccount(), formStatuses);
+    }
+
+    private List<ResultData> getFixtureData(List<Fixture> fixtures)
     {
         List<ResultData> matchResult = new ArrayList<>();
         for (Fixture fixture : fixtures)
@@ -194,11 +323,20 @@ public class FormServiceImpl implements FormService
     }
 
     @Override
-    public List<ResultData> createOrUpdateForm(List<ResultData> formData)
+    public ResultData findUserFormData(Long formId)
     {
-//        formRepository.findById()
-//        Form form = new Form();
-//        form.setName();
-        return null;
+        Form form = formRepository.findById(formId).get();
+        ResultData formTemplateData = findFormTemplate(form.getFormTemplate().getId());
+        List<Match> matches = matchRepository.findByForm(formRepository.findById(formId).get());
+
+        for (ResultData data : (List<ResultData>) formTemplateData.getProperties().get("matches"))
+            for (Match match : matches)
+                if (Long.valueOf(data.getProperties().get("id").toString()).equals(match.getFixtureId()) && match.getForm().getId().equals(formId))
+                {
+                    data.addProperty("homeWin", match.isLocalWin());
+                    data.addProperty("noWin", match.isNoWin());
+                    data.addProperty("awayWin", match.isVisitorWin());
+                }
+        return formTemplateData;
     }
 }

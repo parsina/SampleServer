@@ -12,7 +12,7 @@ import java.util.List;
 
 import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.livescore.Fixture;
-import com.coin.app.model.livescore.FixtureStatus;
+import com.coin.app.model.enums.FixtureStatus;
 import com.coin.app.repository.FixtureRepository;
 import com.coin.app.util.Utills;
 import com.google.gson.JsonArray;

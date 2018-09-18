@@ -135,7 +135,7 @@ public class UserServiceImpl implements UserService
             return result;
         } else
         {
-            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email,password));
+            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             String jwt = jwtTokenProvider.generateToken(authentication);
@@ -162,9 +162,14 @@ public class UserServiceImpl implements UserService
     public boolean isAuthenticated(Long userId)
     {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth.isAuthenticated() && ((UserPrincipal)auth.getPrincipal()).getId().equals(userId))
-            return true;
-        return false;
+        return userId == null ? auth.isAuthenticated() : auth.isAuthenticated() && ((UserPrincipal) auth.getPrincipal()).getId().equals(userId);
+    }
+
+    @Override
+    public User getCurrentUser()
+    {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth.isAuthenticated() ? userRepository.findById(((UserPrincipal) auth.getPrincipal()).getId()).get() : null;
     }
 
     @Override

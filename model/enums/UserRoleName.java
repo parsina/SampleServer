@@ -1,4 +1,4 @@
-package com.coin.app.model.auth;
+package com.coin.app.model.enums;
 
 public enum UserRoleName
 {

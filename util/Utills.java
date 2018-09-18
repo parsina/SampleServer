@@ -1,6 +1,10 @@
 package com.coin.app.util;
 
 import java.text.DecimalFormat;
+import java.time.LocalDate;
+import java.util.Date;
+
+import ir.huri.jcal.JalaliCalendar;
 
 public class Utills
 {
@@ -43,6 +47,11 @@ public class Utills
         int month = Integer.valueOf(date.split("-")[1]);
         String day = date.split("-")[2];
         return day + " " + JalaliMonths.values()[month - 1] + " " + (includeYear ? year : "");
+    }
+
+    public static String nameDisplayForDate(LocalDate localDate, boolean includeYear)
+    {
+        return nameDisplayForDate(new JalaliCalendar(localDate).toString(), includeYear);
     }
 
     public static String shortDisplayForTime(String time)

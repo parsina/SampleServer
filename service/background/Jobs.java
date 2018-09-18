@@ -2,17 +2,11 @@ package com.coin.app.service.background;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 import java.util.TimerTask;
 
 import com.coin.app.model.livescore.Fixture;
-import com.coin.app.model.livescore.FixtureStatus;
-import com.coin.app.model.livescore.FormTemplate;
 import com.coin.app.model.livescore.FormTemplateStatus;
 import com.coin.app.repository.FixtureRepository;
-import com.coin.app.repository.FormTemplateRepository;
 import com.coin.app.service.LiveScoreService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

@@ -32,8 +32,9 @@ public class FormController
     @Autowired
     private FormService formService;
 
-    @GetMapping("/matchData")
-    public List<ResultData> matchData()
+    @Secured("ROLE_ADMIN")
+    @GetMapping("/fixtureData")
+    public List<ResultData> freeFixtureData()
     {
         return liveScoreService.findAllFreeFixtures();
     }
@@ -48,7 +49,6 @@ public class FormController
     @GetMapping("/formTemplates")
     public List<ResultData> formTemplates()
     {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return formService.findFormTemplates();
     }
 
@@ -81,4 +81,33 @@ public class FormController
         return formService.createForm(Long.valueOf(input.get("formTemplateId").toString()), Long.valueOf(input.get("userId").toString()),  (List<ResultData>) input.get("formData"));
     }
 
+    @Secured({"ROLE_ADMIN", "ROLE_USER"})
+    @PostMapping("/updateForm")
+    public ResultData updateForm(@RequestBody Map<String, Object> input)
+    {
+        return formService.updateForm(Long.valueOf(input.get("formId").toString()), Long.valueOf(input.get("userId").toString()),  (List<ResultData>) input.get("formData"));
+    }
+
+
+
+    @Secured({"ROLE_ADMIN", "ROLE_USER"})
+    @PostMapping("/userForms")
+    public ResultData userForms(@RequestBody Map<String, String> input)
+    {
+        return formService.findUserForms(input.get("formType"), input.get("filter"), input.get("sortOrder"), input.get("sortBy"), Integer.valueOf(input.get("pageNumber")), Integer.valueOf(input.get("pageSize")));
+    }
+
+    @Secured({"ROLE_ADMIN", "ROLE_USER"})
+    @GetMapping("/userFormsCount")
+    public Long userFormsCount(String formType)
+    {
+        return formService.getUserFormsSize(formType);
+    }
+
+    @Secured({"ROLE_ADMIN", "ROLE_USER"})
+    @PostMapping("/getUserFormData")
+    public ResultData findUserFormData(@RequestBody Map<String, String> input)
+    {
+        return formService.findUserFormData(Long.valueOf(input.get("formId")));
+    }
 }

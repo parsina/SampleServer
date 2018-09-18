@@ -15,6 +15,8 @@ public interface UserService
 
     boolean isAuthenticated(Long userId);
 
+    User getCurrentUser();
+
     User activateUser(User user);
 
     void save(User user);

@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 import com.coin.app.model.livescore.Fixture;
-import com.coin.app.model.livescore.FixtureStatus;
 import com.coin.app.model.livescore.FormTemplate;
 import com.coin.app.model.livescore.FormTemplateStatus;
 import org.springframework.data.jpa.repository.JpaRepository;

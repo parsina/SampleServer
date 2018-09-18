@@ -1,22 +1,16 @@
 package com.coin.app;
 
-import com.coin.app.config.SecurityConfiguration;
 import com.coin.app.service.BackgroundJobsService;
 import com.coin.app.service.BitcoinJService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 
 @SpringBootApplication
 @ComponentScan("com")
@@ -31,7 +25,22 @@ public class CoinServerApplication
 
     public static void main(String[] args)
     {
-        SpringApplication.run(CoinServerApplication.class, args);
+//        SpringApplication.run(CoinServerApplication.class, args);
+
+        //SpringApplicationBuilder() returns an ApplicationContext, but creating the variable is optional
+
+        SpringApplicationBuilder sa = new SpringApplicationBuilder().bannerMode(Banner.Mode.CONSOLE); //Prints banner to System.out
+
+//        new SpringApplicationBuilder().bannerMode(Banner.Mode.LOG); //Prints banner to the log file
+//
+//        new SpringApplicationBuilder().bannerMode(Banner.Mode.OFF); //Disables the banner
+
+
+
+        //Now, if you need to do something else with the ApplicationContext, you can (such as print all the beans, etc.)
+
+        sa.sources(CoinServerApplication.class);
+        sa.run(args);
     }
 
     @Bean

@@ -15,9 +15,15 @@ public interface FormService
 
     ResultData  createForm(Long formTemplateId, Long userId, List<ResultData> matchesData);
 
+    ResultData  updateForm(Long formId, Long userId, List<ResultData> matchesData);
+
     List<ResultData> findFormTemplates();
 
     ResultData getUpdatedFixturesData();
 
-    List<ResultData>  createOrUpdateForm(List<ResultData> formData);
+    ResultData findUserForms(String type, String filter, String sortOrder, String sortBy, int pageNumber,int pageSize);
+
+    Long getUserFormsSize(String type);
+
+    ResultData findUserFormData(Long formId);
 }

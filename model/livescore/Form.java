@@ -3,7 +3,6 @@ package com.coin.app.model.livescore;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-import javax.persistence.Access;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -15,7 +14,6 @@ import javax.validation.constraints.NotNull;
 import com.coin.app.model.Account;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
@@ -32,9 +30,9 @@ public class Form
 
     private @NotNull String name;
 
-    private @NotNull LocalDate cratedDate;
+    private @NotNull LocalDate createdDate;
 
-    private @NotNull LocalTime cratedTime;
+    private @NotNull LocalTime createdTime;
 
     private @NotNull int score;
 
@@ -49,11 +47,15 @@ public class Form
     @ManyToOne
     private @NotNull Account account;
 
-    public Form(@NotNull String name, @NotNull LocalDate cratedDate, @NotNull LocalTime cratedTime, FormStatus status, @NotNull FormTemplate formTemplate)
+    public Form()
+    {
+    }
+
+    public Form(@NotNull String name, @NotNull LocalDate createdDate, @NotNull LocalTime createdTime, FormStatus status, @NotNull FormTemplate formTemplate)
     {
         this.name = name;
-        this.cratedDate = cratedDate;
-        this.cratedTime = cratedTime;
+        this.createdDate = createdDate;
+        this.createdTime = createdTime;
         this.status = status;
         this.formTemplate = formTemplate;
         this.score = 0;

@@ -1,18 +1,20 @@
 package com.coin.app.controller;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 import com.coin.app.dto.data.ResultData;
+import com.coin.app.model.enums.FormStatus;
+import com.coin.app.model.enums.FormTemplateStatus;
+import com.coin.app.model.enums.FormTemplateType;
 import com.coin.app.service.FormService;
 import com.coin.app.service.LiveScoreService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.annotation.Secured;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,15 +43,18 @@ public class FormController
 
     @Secured("ROLE_ADMIN")
     @PostMapping("/createFormTemplate")
-    public List<ResultData> createFormTemplate(@RequestBody Map<String, List<Long>> input)
+    public List<ResultData> createFormTemplate(@RequestBody Map<String, ?> input)
     {
-        return formService.createFormTemplate(input.get("ids"));
+        return formService.createFormTemplate((List) input.get("ids"), FormTemplateType.valueOf(input.get("type").toString()));
     }
 
     @GetMapping("/formTemplates")
     public List<ResultData> formTemplates()
     {
-        return formService.findFormTemplates();
+        List<FormTemplateStatus> statuses = new ArrayList<>();
+        statuses.add(FormTemplateStatus.OPEN);
+        statuses.add(FormTemplateStatus.CLOSE);
+        return formService.findFormTemplatesByStatus(statuses);
     }
 
     @GetMapping("/formTemplateData")
@@ -58,13 +63,14 @@ public class FormController
         return formService.findFormTemplate(id);
     }
 
+    @Async
     @GetMapping("/updateFormTemplate")
     public SseEmitter updateFTData(Long id)
     {
-        ResultData data = formService.getUpdatedFixturesData();
         SseEmitter notifier = new SseEmitter(60000L);
         try
         {
+            ResultData data = formService.getUpdatedFixturesData();
             notifier.send(SseEmitter.event().reconnectTime(500).data(data));
         } catch (IOException e)
         {
@@ -72,6 +78,44 @@ public class FormController
         }
         System.out.println(">>>>> Update Time : " + new Date());
         return notifier;
+    }
+
+
+    @GetMapping("/totalPassedFromTemplates")
+    public Long totalPassedFromTemplates()
+    {
+        List<FormTemplateStatus> statuses = new ArrayList<>();
+        statuses.add(FormTemplateStatus.PASSED);
+        return formService.getFormTemplatesCount(statuses);
+    }
+
+    @PostMapping("/passedFromTemplates")
+    public List<ResultData> passedFromTemplates(@RequestBody Map<String, String> input)
+    {
+        List<FormTemplateStatus> statuses = new ArrayList<>();
+        statuses.add(FormTemplateStatus.PASSED);
+        return formService.findFormTemplatesByStatus(statuses, input.get("filter"), input.get("sortOrder"), input.get("sortBy"), Integer.valueOf(input.get("pageNumber")), Integer.valueOf(input.get("pageSize")));
+    }
+
+    @GetMapping("/templateFormsSize")
+    public Long templateFormsSize(Long formTemplateId)
+    {
+        return formService.getTemplateFormssCount(formTemplateId);
+    }
+
+    @PostMapping("/templateForms")
+    public ResultData templateForms(@RequestBody Map<String, String> input)
+    {
+        return formService.findFormsByFormTemplate(Long.valueOf(input.get("formTemplateId")), input.get("filter"), input.get("sortOrder"), input.get("sortBy"), Integer.valueOf(input.get("pageNumber")), Integer.valueOf(input.get("pageSize")));
+    }
+
+    @Secured({"ROLE_ADMIN", "ROLE_USER"})
+    @GetMapping("/openFormTemplates")
+    public List<ResultData> openFormTemplates()
+    {
+        List<FormTemplateStatus> statuses = new ArrayList<>();
+        statuses.add(FormTemplateStatus.OPEN);
+        return formService.findFormTemplatesByStatus(statuses);
     }
 
     @Secured({"ROLE_ADMIN", "ROLE_USER"})
@@ -87,8 +131,6 @@ public class FormController
     {
         return formService.updateForm(Long.valueOf(input.get("formId").toString()), Long.valueOf(input.get("userId").toString()),  (List<ResultData>) input.get("formData"));
     }
-
-
 
     @Secured({"ROLE_ADMIN", "ROLE_USER"})
     @PostMapping("/userForms")
@@ -109,5 +151,13 @@ public class FormController
     public ResultData findUserFormData(@RequestBody Map<String, String> input)
     {
         return formService.findUserFormData(Long.valueOf(input.get("formId")));
+    }
+
+    @PostMapping("/getPassedFormData")
+    public ResultData findPassedFormData(@RequestBody Map<String, String> input)
+    {
+        List<FormStatus> statuses = new ArrayList<>();
+        statuses.add(FormStatus.PASSED);
+        return formService.findUserFormData(Long.valueOf(input.get("formId")), statuses);
     }
 }

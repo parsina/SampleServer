@@ -30,7 +30,8 @@ public class EmailServiceImpl implements EmailService
     public void sendActivationLink(String email)
     {
         User user = userService.findByUsername(email);
-        user.setAccount(accountService.createAccount(user));
+        while(user.getAccount() == null)
+            user.setAccount(accountService.createAccount(user));
         userService.saveUser(user);
 
         String message = "لطفا جهت تایید ایمیل و فعال سازی حساب خود بر روی لینک زیر کلیک نمایید: " ;

@@ -47,8 +47,11 @@ public class UserServiceImpl implements UserService
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
 
+    @Autowired
+    private AccountService accountService;
+
     @Override
-    public ResultData createUser(String email, String password, String repeatedPassword)
+    public ResultData createUser(String username, String email, String password, String repeatedPassword)
     {
         ResultData result = new ResultData(false, "");
 
@@ -73,10 +76,20 @@ public class UserServiceImpl implements UserService
                 result.addProperty("userEmail", user.getEmail()); // Should be removed
                 return result;
             }
+
+            user = userRepository.findByUsername(username);
+            if (user != null)
+            {
+                result.setSuccess(true); // Should be removed
+                result.setMessage("User Exist !");
+                result.addProperty("username", user.getUsername()); // Should be removed
+                return result;
+            }
             user = new User();
             user.setCreatedDate(new Date());
             user.setParentId(-1L);
             user.setEmail(email.toLowerCase());
+            user.setUsername(username);
             user.setPassword(passwordEncoder.encode(password));
             user.setStatus(UserStatus.INACTIVE);
             user.setRole(UserRole.ROLE_USER);
@@ -101,25 +114,29 @@ public class UserServiceImpl implements UserService
                 result.setMessage("User is enabled before");
                 return result;
             }
-
+            while(user.getAccount() == null)
+                user.setAccount(accountService.createAccount(user));
             user.setStatus(UserStatus.ACTIVE);
             userRepository.save(user);
             result.setSuccess(true);
             result.setMessage("User activation is finished");
             result.addProperty("id", user.getId());
+            result.addProperty("username", user.getUsername());
             result.addProperty("email", user.getEmail());
         }
         return result;
     }
 
     @Override
-    public ResultData login(String email, String password)
+    public ResultData login(String username, String password)
     {
         ResultData result = new ResultData(false, "");
-        User user = userRepository.findByEmail(email);
+        User user = userRepository.findByEmail(username);
+        if( user == null )
+            user = userRepository.findByEmail(username);
         if (user == null)
         {
-            result.setMessage("Email is incorrect !");
+            result.setMessage("Username/Email is incorrect !");
             return result;
         } else if (user.getStatus().equals(UserStatus.INACTIVE))
         {
@@ -135,7 +152,7 @@ public class UserServiceImpl implements UserService
             return result;
         } else
         {
-            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
+            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getEmail(), password));
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             String jwt = jwtTokenProvider.generateToken(authentication);
@@ -145,6 +162,7 @@ public class UserServiceImpl implements UserService
             result.setSuccess(true);
             result.setMessage("User loged in !");
             result.addProperty("id", user.getId());
+            result.addProperty("username", user.getUsername());
             result.addProperty("email", user.getEmail());
             result.addProperty("role", user.getRole());
             result.addProperty("info", user.getUserInfo());

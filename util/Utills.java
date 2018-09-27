@@ -20,7 +20,7 @@ public class Utills
             pattern.append("#");
         }
 
-        if(bid)
+        if (bid)
             amount = amount - (0.01 * amount);
         else
             amount = amount + (0.01 * amount);
@@ -43,7 +43,7 @@ public class Utills
 
     public static String nameDisplayForDate(String date, boolean includeYear)
     {
-        String year = date.split("-")[0].substring(2,4);
+        String year = date.split("-")[0].substring(2, 4);
         int month = Integer.valueOf(date.split("-")[1]);
         String day = date.split("-")[2];
         return day + " " + JalaliMonths.values()[month - 1] + " " + (includeYear ? year : "");
@@ -56,6 +56,11 @@ public class Utills
 
     public static String shortDisplayForTime(String time)
     {
-        return time.split(":")[0] + ":" +  time.split(":")[1];
+        return time.split(":")[0] + ":" + time.split(":")[1];
+    }
+
+    public static String addLeadingZeros(int count, long num)
+    {
+        return String.format("%0" + (count + 1) + "d", num);
     }
 }

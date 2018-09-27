@@ -64,9 +64,9 @@ public class Fixture
 
     private String weatherReport;
 
-    private int halfTimeScore;
-    private int fullTimeScore;
-    private int extraTimeScore;
+    private String halfTimeScore;
+    private String fullTimeScore;
+    private String extraTimeScore;
 
     @Enumerated(EnumType.STRING)
     private @NotNull FixtureStatus status;

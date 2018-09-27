@@ -34,7 +34,7 @@ public class UserController
     @PostMapping("/signUp")
     public ResultData create(@RequestBody Map<String, ?> input)
     {
-        return userService.createUser(input.get("username").toString(), input.get("pass").toString(), input.get("reppass").toString());
+        return userService.createUser(input.get("username").toString(), input.get("email").toString(), input.get("pass").toString(), input.get("reppass").toString());
     }
 
     @PostMapping("/sendActivationLink")
@@ -50,9 +50,16 @@ public class UserController
     }
 
     @PostMapping("/login")
-    public ResultData login(@RequestBody Map<String, ?> input) throws AuthenticationException
+    public ResultData login(@RequestBody Map<String, ?> input)
     {
         return userService.login(input.get("username").toString(), input.get("password").toString());
+    }
+
+    @PostMapping("/logout")
+    public boolean logout(@RequestBody Map<String, ?> input)
+    {
+        System.out.println(input);
+        return true;
     }
 
     @GetMapping(path = {"/{id}"})

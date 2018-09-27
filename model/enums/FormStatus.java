@@ -1,4 +1,4 @@
-package com.coin.app.model.livescore;
+package com.coin.app.model.enums;
 
 public enum FormStatus
 {

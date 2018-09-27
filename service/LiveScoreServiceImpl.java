@@ -6,13 +6,20 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.xml.bind.Element;
+
 import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.livescore.Fixture;
 import com.coin.app.model.enums.FixtureStatus;
+import com.coin.app.model.single.Book;
+import com.coin.app.model.single.BookData;
+import com.coin.app.repository.BookDataRepository;
+import com.coin.app.repository.BookRepository;
 import com.coin.app.repository.FixtureRepository;
 import com.coin.app.util.Utills;
 import com.google.gson.JsonArray;
@@ -22,6 +29,7 @@ import com.google.gson.JsonParser;
 import ir.huri.jcal.JalaliCalendar;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -36,11 +44,17 @@ public class LiveScoreServiceImpl implements LiveScoreService
     @Autowired
     private FixtureRepository fixtureRepository;
 
+    @Autowired
+    private BookRepository bookRepository;
+
+    @Autowired
+    private BookDataRepository bookDataRepository;
+
     @Override
     public void loadFixtures()
     {
-        String fDate = LocalDate.now().plusDays(0).toString();
-        String tDate = LocalDate.now().plusDays(15).toString();
+        String fDate = LocalDate.now().minusDays(0).toString();
+        String tDate = LocalDate.now().plusDays(10).toString();
 
         String uri = this.root + "fixtures/between/" + fDate + "/" + tDate + "?api_token=" + this.key + "&include=localTeam,visitorTeam,league,inplay";
         String content = fetchContent(uri);
@@ -50,6 +64,51 @@ public class LiveScoreServiceImpl implements LiveScoreService
             JsonArray dataArray = fixtureObject.get("data").getAsJsonArray();
             for (JsonElement element : dataArray)
                 updateFixtureData(element.getAsJsonObject());
+        }
+    }
+
+    @Override
+    public void loadFixtureBooks()
+    {
+        List<Fixture> fixtures = fixtureRepository.findByLocalDateGreaterThanOrderByDateAscTimeAsc(LocalDate.now().minusDays(1));
+        for(Fixture fixture : fixtures)
+        {
+            String uri = this.root + "odds/fixture/" + fixture.getId() + "/bookmaker/2?api_token=" + this.key;
+            String content = fetchContent(uri);
+            JsonObject fixtureObject = toJsonObject(content);
+            if (fixtureObject.get("data") != null)
+            {
+                JsonArray dataArray = fixtureObject.get("data").getAsJsonArray();
+                for (JsonElement element : dataArray)
+                {
+                    Book book = new Book();
+                    book.setBookId(element.getAsJsonObject().get("id").toString());
+                    book.setType(element.getAsJsonObject().get("name").toString());
+                    book.setFixture(fixture);
+                    book = bookRepository.save(book);
+
+                    JsonArray bookMakerArr = element.getAsJsonObject().get("bookmaker").getAsJsonObject().get("data").getAsJsonArray().get(0).getAsJsonObject().get("odds").getAsJsonObject().get("data").getAsJsonArray();
+                    for(JsonElement maker : bookMakerArr )
+                    {
+                        BookData bookData = new BookData();
+                        bookData.setLabel(maker.getAsJsonObject().get("label") == null ? null : maker.getAsJsonObject().get("label").toString());
+                        bookData.setValue(maker.getAsJsonObject().get("value") == null ? null : maker.getAsJsonObject().get("value").toString());
+                        bookData.setDp3(maker.getAsJsonObject().get("dp3") == null ? null : maker.getAsJsonObject().get("dp3").toString());
+                        bookData.setAmerican(maker.getAsJsonObject().get("american") == null ? null : maker.getAsJsonObject().get("american").toString());
+                        bookData.setWinning(maker.getAsJsonObject().get("winning") == null ? null : maker.getAsJsonObject().get("winning").toString());
+                        bookData.setHandicap(maker.getAsJsonObject().get("handicap") == null ? null : maker.getAsJsonObject().get("handicap").toString());
+                        bookData.setTotal(maker.getAsJsonObject().get("total") == null ? null : maker.getAsJsonObject().get("total").toString());
+                        bookData.setEventId(maker.getAsJsonObject().get("bookmaker_event_id") == null ? null : maker.getAsJsonObject().get("bookmaker_event_id").toString());
+                        String date = maker.getAsJsonObject().get("last_update").getAsJsonObject().get("date").toString().substring(1).split(" ")[0];
+                        String time = maker.getAsJsonObject().get("last_update").getAsJsonObject().get("date").toString().split(" ")[1].substring(0,8);
+                        bookData.setLastUpdateDate(LocalDate.parse(date));
+                        bookData.setLastUpdateTime(LocalTime.parse(time));
+                        bookData.setBook(book);
+                        bookDataRepository.save(bookData);
+                    }
+
+                }
+            }
         }
     }
 
@@ -116,9 +175,9 @@ public class LiveScoreServiceImpl implements LiveScoreService
         fixture.setMinute(fixtureObject.get("time").getAsJsonObject().get("minute").isJsonNull() ? null : fixtureObject.get("time").getAsJsonObject().get("minute").getAsString());
         fixture.setExtraTime(fixtureObject.get("time").getAsJsonObject().get("extra_minute").isJsonNull() ? null : fixtureObject.get("time").getAsJsonObject().get("extra_minute").getAsString());
         fixture.setAddedTime(fixtureObject.get("time").getAsJsonObject().get("added_time").isJsonNull() ? null : fixtureObject.get("time").getAsJsonObject().get("added_time").getAsString());
-//        fixture.setHalfTimeScore(fixtureObject.get("scores").getAsJsonObject().get("ht_score").isJsonNull()? null : fixtureObject.get("scores").getAsJsonObject().get("ht_score").getAsString());
-//        fixture.setFullTimeScore(fixtureObject.get("scores").getAsJsonObject().get("ft_score").isJsonNull()? null : fixtureObject.get("scores").getAsJsonObject().get("ft_score").getAsString());
-//        fixture.setExtraTimeScore(fixtureObject.get("scores").getAsJsonObject().get("et_score").isJsonNull()? null : fixtureObject.get("scores").getAsJsonObject().get("et_score").getAsString());
+        fixture.setHalfTimeScore(fixtureObject.get("scores").getAsJsonObject().get("ht_score").isJsonNull()? null : fixtureObject.get("scores").getAsJsonObject().get("ht_score").getAsString());
+        fixture.setFullTimeScore(fixtureObject.get("scores").getAsJsonObject().get("ft_score").isJsonNull()? null : fixtureObject.get("scores").getAsJsonObject().get("ft_score").getAsString());
+        fixture.setExtraTimeScore(fixtureObject.get("scores").getAsJsonObject().get("et_score").isJsonNull()? null : fixtureObject.get("scores").getAsJsonObject().get("et_score").getAsString());
 
         // Local Team Data
         fixture.setLocalTeamId(fixtureObject.get("localTeam").getAsJsonObject().get("data").getAsJsonObject().get("id").getAsLong());

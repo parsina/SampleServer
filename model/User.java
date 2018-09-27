@@ -37,7 +37,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 @Setter
 @ToString
 @EqualsAndHashCode
-@Table(name = "\"User\"")
+@Table(name = "User")
 
 public class User
 {
@@ -66,7 +66,7 @@ public class User
     @Enumerated(EnumType.STRING)
     private @NotNull UserStatus status;
 
-    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToOne
     private Account account;
 
     @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)

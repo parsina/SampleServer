@@ -3,10 +3,13 @@ package com.coin.app.model;
 import java.util.Date;
 import java.util.List;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToMany;
@@ -32,7 +35,7 @@ import lombok.ToString;
 public class Account
 {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private @NotNull Date createdDate;
@@ -44,4 +47,7 @@ public class Account
 
     @Enumerated(EnumType.STRING)
     private AccountStatus status;
+
+    @OneToOne
+    private User user;
 }

@@ -1,6 +1,9 @@
-package com.coin.app.model;
+package com.coin.app.model.single;
 
-import javax.persistence.Column;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -20,28 +23,32 @@ import lombok.ToString;
 @NoArgsConstructor
 @ToString
 @EqualsAndHashCode
-
-public class CoinAmount
+public class BookData
 {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name;
+    private String label;
 
-    private String fullName;
+    private String value;
 
-    private String amount;
+    private String dp3;
 
-    private String bid;
+    private String american;
 
-    private String ask;
+    private String winning;
 
-    private String marketCapital;
+    private String handicap;
 
-    private String volume;
+    private String total;
 
-    private String change;
+    private String eventId;
 
-    private String description;
+    private LocalDate lastUpdateDate;
+
+    private LocalTime lastUpdateTime;
+
+    @ManyToOne
+    private @NotNull Book book;
 }

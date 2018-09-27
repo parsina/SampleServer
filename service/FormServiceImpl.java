@@ -10,16 +10,20 @@ import java.util.List;
 import java.util.Map;
 
 import com.coin.app.dto.data.ResultData;
+import com.coin.app.model.Account;
+import com.coin.app.model.enums.FixtureStatus;
+import com.coin.app.model.enums.FormTemplateType;
 import com.coin.app.model.livescore.Fixture;
 import com.coin.app.model.livescore.Form;
-import com.coin.app.model.livescore.FormStatus;
+import com.coin.app.model.enums.FormStatus;
 import com.coin.app.model.livescore.FormTemplate;
-import com.coin.app.model.livescore.FormTemplateStatus;
+import com.coin.app.model.enums.FormTemplateStatus;
 import com.coin.app.model.livescore.Match;
 import com.coin.app.repository.FixtureRepository;
 import com.coin.app.repository.FormRepository;
 import com.coin.app.repository.FormTemplateRepository;
 import com.coin.app.repository.MatchRepository;
+import com.coin.app.repository.UserRepository;
 import com.coin.app.util.Utills;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -47,6 +51,9 @@ public class FormServiceImpl implements FormService
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @Override
     public ResultData findFormTemplate(Long formId)
     {
@@ -63,13 +70,15 @@ public class FormServiceImpl implements FormService
     }
 
     @Override
-    public List<ResultData> createFormTemplate(List<Long> matchIds)
+    public List<ResultData> createFormTemplate(List matchIds, FormTemplateType type)
     {
-        FormTemplate formTemplate = formTemplateRepository.save(new FormTemplate(String.valueOf(formTemplateRepository.count() + 1), 10));
+        long count = formTemplateRepository.countByType(type) + 1;
+        String name = "مسابقه " + (type.equals(FormTemplateType.GOLD) ? "طلایی" : type.equals(FormTemplateType.SILVER) ? "نقره ای" : "برنزی") + " شماره " + Utills.addLeadingZeros(5, count);
+        FormTemplate formTemplate = formTemplateRepository.save(new FormTemplate(name, type));
 
-        for (Long id : matchIds)
+        for (Object id : matchIds)
         {
-            Fixture fixture = fixtureRepository.findById(id).get();
+            Fixture fixture = fixtureRepository.findById(Long.valueOf(id.toString())).get();
             fixture.setUsed(true);
             fixture.setFormTemplate(formTemplate);
             fixtureRepository.save(fixture);
@@ -115,10 +124,12 @@ public class FormServiceImpl implements FormService
                     value = value * 2;
             }
 
+            Account account = userService.findById(userId).getAccount();
             FormTemplate formTemplate = formTemplateRepository.findById(formTemplateId).get();
-            Form form = new Form(String.valueOf(formRepository.count() + 1), LocalDate.now(ZoneId.of("Asia/Tehran")), LocalTime.now(ZoneId.of("Asia/Tehran")), FormStatus.REGISTERED, formTemplate);
+            String name = "فرم شماره " + Utills.addLeadingZeros(3, formRepository.countByAccount(account) + 1);
+            Form form = new Form(name, LocalDate.now(ZoneId.of("Asia/Tehran")), LocalTime.now(ZoneId.of("Asia/Tehran")), FormStatus.REGISTERED, formTemplate);
             form.setValue(value);
-            form.setAccount(userService.findById(userId).getAccount());
+            form.setAccount(account);
             formRepository.save(form);
 
             for (Object matchData : matchesData)
@@ -207,14 +218,31 @@ public class FormServiceImpl implements FormService
     }
 
     @Override
-    public List<ResultData> findFormTemplates()
+    public List<ResultData> findFormTemplatesByStatus(List<FormTemplateStatus> statuses)
     {
         List<ResultData> resultDataList = new ArrayList<>();
-        for (FormTemplate formTemplate : formTemplateRepository.findAll())
+        for (FormTemplate formTemplate : formTemplateRepository.findAllByStatusIsIn(statuses))
         {
             ResultData result = new ResultData(true, "");
             result.addProperty("id", formTemplate.getId());
-            result.addProperty("name", "مسابقه شماره " + formTemplate.getName());
+            result.addProperty("name", formTemplate.getName());
+            resultDataList.add(result);
+        }
+        return resultDataList;
+    }
+
+    @Override
+    public List<ResultData> findFormTemplatesByStatus(List<FormTemplateStatus> statuses, String filter, String sortOrder, String sortBy, int pageNumber, int pageSize)
+    {
+        List<ResultData> resultDataList = new ArrayList<>();
+        Sort orderBy = new Sort(sortOrder.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC, sortBy.isEmpty() ? "id" : sortBy);
+        for (FormTemplate formTemplate : formTemplateRepository.findByStatusIsIn(statuses, PageRequest.of(pageNumber, pageSize, orderBy)))
+        {
+            ResultData result = new ResultData(true, "");
+            result.addProperty("id", formTemplate.getId());
+            result.addProperty("name", formTemplate.getName());
+            result.addProperty("numberOfForms", formTemplate.getNumberOfForms());
+            result.addProperty("totalValue", formTemplate.getTotalValue());
             resultDataList.add(result);
         }
         return resultDataList;
@@ -224,7 +252,50 @@ public class FormServiceImpl implements FormService
     public ResultData getUpdatedFixturesData()
     {
         ResultData resultData = new ResultData(true, "");
-        resultData.addProperty("matches", getFixtureData(fixtureRepository.findByUsedAndFormTemplateStatusOrderByDateAscTimeAsc(true, FormTemplateStatus.OPEN)));
+
+        List<FormTemplateStatus> formTemplateStatuses = new ArrayList<>();
+        formTemplateStatuses.add(FormTemplateStatus.OPEN);
+        formTemplateStatuses.add(FormTemplateStatus.CLOSE);
+
+        resultData.addProperty("matches", getFixtureData(fixtureRepository.findByUsedAndFormTemplateStatusIsInOrderByDateAscTimeAsc(true, formTemplateStatuses)));
+        return resultData;
+    }
+
+    @Override
+    public Long getFormTemplatesCount(List<FormTemplateStatus> statuses)
+    {
+        return formTemplateRepository.countByStatusIn(statuses);
+    }
+
+    @Override
+    public Long getTemplateFormssCount(Long formTemplateId)
+    {
+        return formRepository.countByFormTemplate(formTemplateRepository.findById(formTemplateId).get());
+    }
+
+    @Override
+    public ResultData findFormsByFormTemplate(Long formTemplateId, String filter, String sortOrder, String sortBy, int pageNumber, int pageSize)
+    {
+        ResultData resultData = new ResultData(true, "");
+        if (sortBy.equals("username"))
+            sortBy = "account.user.username";
+        Sort orderBy = new Sort(sortOrder.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC, sortBy.isEmpty() ? "id" : sortBy);
+        List<Form> forms = formRepository.findByFormTemplate(formTemplateRepository.findById(formTemplateId).get(), PageRequest.of(pageNumber, pageSize, orderBy));
+        List<Map<String, String>> dataList = new ArrayList<>();
+        for (Form form : forms)
+        {
+            Map<String, String> data = new HashMap<>();
+            data.put("id", form.getId().toString());
+            data.put("username", userRepository.findByAccount(form.getAccount()).getUsername());
+            data.put("name", form.getName());
+            data.put("createdDate", Utills.nameDisplayForDate(form.getCreatedDate(), false));
+            data.put("createdTime", Utills.shortDisplayForTime(form.getCreatedTime().toString()));
+            data.put("score", String.valueOf(form.getScore()));
+            data.put("value", String.valueOf(form.getValue()));
+            data.put("status", form.getStatus().name());
+            dataList.add(data);
+        }
+        resultData.addProperty("forms", dataList);
         return resultData;
     }
 
@@ -258,14 +329,14 @@ public class FormServiceImpl implements FormService
         {
             Map<String, Object> formMap = new HashMap<>();
             formMap.put("id", form.getId());
-            formMap.put("name", "فرم شماره " + form.getName());
+            formMap.put("name", form.getName());
             formMap.put("value", form.getValue());
             formMap.put("score", form.getScore());
             formMap.put("createdDate", Utills.nameDisplayForDate(form.getCreatedDate(), false));
             formMap.put("createdTime", Utills.shortDisplayForTime(form.getCreatedTime().toString()));
             formMap.put("status", form.getStatus());
             formMap.put("templateId", form.getFormTemplate().getId());
-            formMap.put("templateName", "مسابقه شماره " + form.getFormTemplate().getName());
+            formMap.put("templateName", form.getFormTemplate().getName());
             forms.add(formMap);
         }
         resultData.addProperty("forms", forms);
@@ -315,7 +386,8 @@ public class FormServiceImpl implements FormService
             matchData.addProperty("league", fixture.getLeagueName());
             matchData.addProperty("time", Utills.shortDisplayForTime(fixture.getTime()));
             matchData.addProperty("date", Utills.nameDisplayForDate(fixture.getDate(), false));
-            matchData.addProperty("minute", fixture.getMinute());
+            matchData.addProperty("minute", fixture.getMinute() == null ? "00" : fixture.getMinute().length() == 1 ? '0' + fixture.getMinute() : fixture.getMinute());
+//            matchData.addProperty("minute", LocalTime.now().getMinute() < 10 ? '0' + LocalTime.now().getMinute() : LocalTime.now().getMinute());
             matchData.addProperty("status", fixture.getStatus());
             matchResult.add(matchData);
         }
@@ -325,17 +397,31 @@ public class FormServiceImpl implements FormService
     @Override
     public ResultData findUserFormData(Long formId)
     {
+        return this.findFormData(formRepository.findById(formId).get());
+    }
+
+    @Override
+    public ResultData findUserFormData(Long formId, List<FormStatus> statuses)
+    {
         Form form = formRepository.findById(formId).get();
+        if (statuses.contains(form.getStatus()))
+            return this.findFormData(form);
+        return new ResultData(false, "Illegal access to form data");
+    }
+
+    private ResultData findFormData(Form form)
+    {
         ResultData formTemplateData = findFormTemplate(form.getFormTemplate().getId());
-        List<Match> matches = matchRepository.findByForm(formRepository.findById(formId).get());
+        List<Match> matches = matchRepository.findByForm(form);
 
         for (ResultData data : (List<ResultData>) formTemplateData.getProperties().get("matches"))
             for (Match match : matches)
-                if (Long.valueOf(data.getProperties().get("id").toString()).equals(match.getFixtureId()) && match.getForm().getId().equals(formId))
+                if (Long.valueOf(data.getProperties().get("id").toString()).equals(match.getFixtureId()) && match.getForm().getId().equals(form.getId()))
                 {
                     data.addProperty("homeWin", match.isLocalWin());
                     data.addProperty("noWin", match.isNoWin());
                     data.addProperty("awayWin", match.isVisitorWin());
+                    data.addProperty("score", match.isScore());
                 }
         return formTemplateData;
     }

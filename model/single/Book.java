@@ -1,16 +1,17 @@
-package com.coin.app.model;
+package com.coin.app.model.single;
 
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
 import javax.validation.constraints.NotNull;
 
+import com.coin.app.model.livescore.Fixture;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 import lombok.Setter;
 import lombok.ToString;
 
@@ -20,28 +21,17 @@ import lombok.ToString;
 @NoArgsConstructor
 @ToString
 @EqualsAndHashCode
-
-public class CoinAmount
+public class Book
 {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name;
+    private @NotNull String bookId; // like 28
 
-    private String fullName;
+    private @NotNull String type; // like 'handicap'
 
-    private String amount;
-
-    private String bid;
-
-    private String ask;
-
-    private String marketCapital;
-
-    private String volume;
-
-    private String change;
-
-    private String description;
+    @OneToOne
+    @NonNull
+    private Fixture fixture;
 }

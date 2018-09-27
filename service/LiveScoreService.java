@@ -9,6 +9,8 @@ public interface LiveScoreService
 {
     void loadFixtures();
 
+    void loadFixtureBooks();
+
     List<ResultData> findAllFreeFixtures();
 
     void updateFixtureData(String fixtureIds);

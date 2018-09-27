@@ -1,6 +1,5 @@
 package com.coin.app.model.livescore;
 
-import java.time.LocalDate;
 import java.util.Date;
 
 import javax.persistence.Entity;
@@ -10,9 +9,10 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.validation.constraints.NotNull;
 
+import com.coin.app.model.enums.FormTemplateStatus;
+import com.coin.app.model.enums.FormTemplateType;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
@@ -29,7 +29,7 @@ public class FormTemplate
 
     private @NotNull String name;
 
-    private @NotNull int numberOfMatches;
+    private @NotNull int numberOfForms;
 
     private @NotNull String createdDate;
 
@@ -38,16 +38,20 @@ public class FormTemplate
     @Enumerated(EnumType.STRING)
     private @NotNull FormTemplateStatus status;
 
+    @Enumerated(EnumType.STRING)
+    private @NotNull FormTemplateType type;
+
     public FormTemplate()
     {
     }
 
-    public FormTemplate(@NotNull String name, @NotNull int numberOfMatches)
+    public FormTemplate(@NotNull String name, @NotNull FormTemplateType type)
     {
         this.name = name;
-        this.numberOfMatches = numberOfMatches;
+        this.numberOfForms = 0;
         this.status = FormTemplateStatus.OPEN;
         this.totalValue = 0L;
         this.createdDate = new Date().toString();
+        this.type = type;
     }
 }

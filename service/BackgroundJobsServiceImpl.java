@@ -12,9 +12,6 @@ public class BackgroundJobsServiceImpl implements BackgroundJobsService
     @Autowired
     private Jobs Jobs;
 
-    @Autowired
-    private LiveScoreService liveScoreService;
-
     public void startJobs()
     {
         Timer timer = new Timer();

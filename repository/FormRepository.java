@@ -22,6 +22,8 @@ public interface FormRepository  extends JpaRepository<Form, Long>
 
     List<Form> findByStatus(FormStatus status);
 
+    List<Form> findByFormTemplateAndScore(FormTemplate formTemplate, int score);
+
     List<Form> findByFormTemplate(FormTemplate formTemplate);
 
     Long countByAccountAndStatusIn(Account account, List<FormStatus> statuses);

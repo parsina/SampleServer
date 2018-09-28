@@ -82,28 +82,28 @@ public class FormController
 
 
     @GetMapping("/totalPassedFromTemplates")
-    public Long totalPassedFromTemplates()
+    public Long totalPassedFromTemplates(String challengeType)
     {
         List<FormTemplateStatus> statuses = new ArrayList<>();
         statuses.add(FormTemplateStatus.PASSED);
-        return formService.getFormTemplatesCount(statuses);
+        return formService.getFormTemplatesCount(statuses, challengeType);
     }
 
-    @PostMapping("/passedFromTemplates")
+    @PostMapping("/passedFormTemplates")
     public List<ResultData> passedFromTemplates(@RequestBody Map<String, String> input)
     {
         List<FormTemplateStatus> statuses = new ArrayList<>();
         statuses.add(FormTemplateStatus.PASSED);
-        return formService.findFormTemplatesByStatus(statuses, input.get("filter"), input.get("sortOrder"), input.get("sortBy"), Integer.valueOf(input.get("pageNumber")), Integer.valueOf(input.get("pageSize")));
+        return formService.findFormTemplatesByStatus(statuses, input.get("challengeType"), input.get("filter"), input.get("sortOrder"), input.get("sortBy"), Integer.valueOf(input.get("pageNumber")), Integer.valueOf(input.get("pageSize")));
     }
 
-    @GetMapping("/templateFormsSize")
+    @GetMapping("/formListSize")
     public Long templateFormsSize(Long formTemplateId)
     {
-        return formService.getTemplateFormssCount(formTemplateId);
+        return formService.countFormList(formTemplateId);
     }
 
-    @PostMapping("/templateForms")
+    @PostMapping("/formList")
     public ResultData templateForms(@RequestBody Map<String, String> input)
     {
         return formService.findFormsByFormTemplate(Long.valueOf(input.get("formTemplateId")), input.get("filter"), input.get("sortOrder"), input.get("sortBy"), Integer.valueOf(input.get("pageNumber")), Integer.valueOf(input.get("pageSize")));

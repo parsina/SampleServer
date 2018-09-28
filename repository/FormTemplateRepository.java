@@ -16,5 +16,9 @@ public interface FormTemplateRepository extends JpaRepository<FormTemplate, Long
 
     List<FormTemplate> findByStatusIsIn(List<FormTemplateStatus> statuses, Pageable pageable);
 
+    List<FormTemplate> findByStatusIsInAndType(List<FormTemplateStatus> statuses, FormTemplateType type, Pageable pageable);
+
     Long countByStatusIn(List<FormTemplateStatus> statuses);
+
+    Long countByStatusInAndType(List<FormTemplateStatus> statuses, FormTemplateType type);
 }

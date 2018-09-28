@@ -23,15 +23,15 @@ public interface FormService
 
     List<ResultData> findFormTemplatesByStatus(List<FormTemplateStatus> statuses);
 
-    List<ResultData> findFormTemplatesByStatus(List<FormTemplateStatus> statuses, String filter, String sortOrder, String sortBy, int pageNumber,int pageSize);
+    List<ResultData> findFormTemplatesByStatus(List<FormTemplateStatus> statuses, String type, String filter, String sortOrder, String sortBy, int pageNumber,int pageSize);
 
     ResultData getUpdatedFixturesData();
 
     ResultData findUserForms(String type, String filter, String sortOrder, String sortBy, int pageNumber,int pageSize);
 
-    Long getFormTemplatesCount(List<FormTemplateStatus> statuses);
+    Long getFormTemplatesCount(List<FormTemplateStatus> statuses, String challengeType);
 
-    Long getTemplateFormssCount(Long formTemplateId);
+    Long countFormList(Long formTemplateId);
 
     ResultData findFormsByFormTemplate(Long formTemplateId, String filter, String sortOrder, String sortBy, int pageNumber,int pageSize);
 

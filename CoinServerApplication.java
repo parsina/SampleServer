@@ -11,6 +11,7 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 
+//@EnableAsync(proxyTargetClass=true)
 @SpringBootApplication
 @ComponentScan("com")
 @EnableAutoConfiguration
@@ -33,7 +34,6 @@ public class CoinServerApplication
 //        new SpringApplicationBuilder().bannerMode(Banner.Mode.LOG); //Prints banner to the log file
 //
 //        new SpringApplicationBuilder().bannerMode(Banner.Mode.OFF); //Disables the banner
-
 
 
         //Now, if you need to do something else with the ApplicationContext, you can (such as print all the beans, etc.)

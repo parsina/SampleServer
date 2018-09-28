@@ -232,11 +232,13 @@ public class FormServiceImpl implements FormService
     }
 
     @Override
-    public List<ResultData> findFormTemplatesByStatus(List<FormTemplateStatus> statuses, String filter, String sortOrder, String sortBy, int pageNumber, int pageSize)
+    public List<ResultData> findFormTemplatesByStatus(List<FormTemplateStatus> statuses, String type, String filter, String sortOrder, String sortBy, int pageNumber, int pageSize)
     {
         List<ResultData> resultDataList = new ArrayList<>();
         Sort orderBy = new Sort(sortOrder.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC, sortBy.isEmpty() ? "id" : sortBy);
-        for (FormTemplate formTemplate : formTemplateRepository.findByStatusIsIn(statuses, PageRequest.of(pageNumber, pageSize, orderBy)))
+        List<FormTemplate> formTemplates = (type == null || type.trim().equals("") || type.equals("ALL")) ? formTemplateRepository.findByStatusIsIn(statuses, PageRequest.of(pageNumber, pageSize, orderBy)) :
+                formTemplateRepository.findByStatusIsInAndType(statuses, FormTemplateType.valueOf(type), PageRequest.of(pageNumber, pageSize, orderBy));
+        for (FormTemplate formTemplate : formTemplates)
         {
             ResultData result = new ResultData(true, "");
             result.addProperty("id", formTemplate.getId());
@@ -262,13 +264,15 @@ public class FormServiceImpl implements FormService
     }
 
     @Override
-    public Long getFormTemplatesCount(List<FormTemplateStatus> statuses)
+    public Long getFormTemplatesCount(List<FormTemplateStatus> statuses, String challengeType)
     {
-        return formTemplateRepository.countByStatusIn(statuses);
+        if(challengeType == null || challengeType.equals("ALL"))
+            return formTemplateRepository.countByStatusIn(statuses);
+        return formTemplateRepository.countByStatusInAndType(statuses, FormTemplateType.valueOf(challengeType));
     }
 
     @Override
-    public Long getTemplateFormssCount(Long formTemplateId)
+    public Long countFormList(Long formTemplateId)
     {
         return formRepository.countByFormTemplate(formTemplateRepository.findById(formTemplateId).get());
     }

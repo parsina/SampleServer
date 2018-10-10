@@ -11,7 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface FixtureRepository extends JpaRepository<Fixture, Long>
 {
-    List<Fixture> findByUsedAndLocalDateGreaterThanOrderByDateAscTimeAsc(boolean used, LocalDate localDate);
+    List<Fixture> findByUsedAndStatusIsAndLocalDateGreaterThanOrderByDateAscTimeAsc(boolean used, FixtureStatus status, LocalDate localDate);
 
     List<Fixture> findByFormTemplateOrderByDateAscTimeAsc(FormTemplate formTemplate);
 

@@ -1,5 +1,6 @@
 package com.coin.app.controller;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -10,9 +11,12 @@ import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.enums.FormStatus;
 import com.coin.app.model.enums.FormTemplateStatus;
 import com.coin.app.model.enums.FormTemplateType;
+import com.coin.app.repository.UserRepository;
 import com.coin.app.service.FormService;
 import com.coin.app.service.LiveScoreService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.annotation.Secured;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -34,6 +38,16 @@ public class FormController
     @Autowired
     private FormService formService;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Secured("ROLE_ADMIN")
+    @GetMapping("/loadFixturesData")
+    public void loadFixturesData()
+    {
+        liveScoreService.loadFixtures();
+    }
+
     @Secured("ROLE_ADMIN")
     @GetMapping("/fixtureData")
     public List<ResultData> freeFixtureData()
@@ -46,6 +60,13 @@ public class FormController
     public List<ResultData> createFormTemplate(@RequestBody Map<String, ?> input)
     {
         return formService.createFormTemplate((List) input.get("ids"), FormTemplateType.valueOf(input.get("type").toString()));
+    }
+
+    @Secured("ROLE_ADMIN")
+    @PostMapping("/deleteFormTemplate")
+    public ResultData deleteFormTemplate(@RequestBody Map<String, ?> input)
+    {
+        return formService.deleteFormTemplate(Long.valueOf(input.get("formTemplateId").toString()));
     }
 
     @GetMapping("/formTemplates")
@@ -88,6 +109,13 @@ public class FormController
         statuses.add(FormTemplateStatus.PASSED);
         return formService.getFormTemplatesCount(statuses, challengeType);
     }
+
+    @GetMapping("/downloadPhotoCal")
+    public ResponseEntity<InputStreamResource> downloadPhotoCal(Long formTemplateId) throws FileNotFoundException
+    {
+        return formService.downloadPhotoCal(formTemplateId);
+    }
+
 
     @PostMapping("/passedFormTemplates")
     public List<ResultData> passedFromTemplates(@RequestBody Map<String, String> input)

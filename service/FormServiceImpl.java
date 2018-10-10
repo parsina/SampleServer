@@ -1,5 +1,11 @@
 package com.coin.app.service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -9,8 +15,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.border.Border;
+
 import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.Account;
+import com.coin.app.model.User;
 import com.coin.app.model.enums.FixtureStatus;
 import com.coin.app.model.enums.FormTemplateType;
 import com.coin.app.model.livescore.Fixture;
@@ -25,10 +34,39 @@ import com.coin.app.repository.FormTemplateRepository;
 import com.coin.app.repository.MatchRepository;
 import com.coin.app.repository.UserRepository;
 import com.coin.app.util.Utills;
+import com.itextpdf.text.BaseColor;
+import com.itextpdf.text.Chunk;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.Image;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.Rectangle;
+import com.itextpdf.text.html.WebColors;
+import com.itextpdf.text.pdf.Barcode128;
+import com.itextpdf.text.pdf.BaseFont;
+import com.itextpdf.text.pdf.ColumnText;
+import com.itextpdf.text.pdf.PdfAnnotation;
+import com.itextpdf.text.pdf.PdfContentByte;
+import com.itextpdf.text.pdf.PdfFormField;
+import com.itextpdf.text.pdf.draw.DottedLineSeparator;
+import com.itextpdf.text.pdf.draw.LineSeparator;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+
+import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Element;
+import com.itextpdf.text.Font;
+import com.itextpdf.text.FontFactory;
+import com.itextpdf.text.Phrase;
+import com.itextpdf.text.pdf.PdfPCell;
+import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfWriter;
 
 @Service
 public class FormServiceImpl implements FormService
@@ -62,19 +100,24 @@ public class FormServiceImpl implements FormService
             return new ResultData(false, "Error in fetching data");
         ResultData resultData = new ResultData(true, "");
         resultData.addProperty("id", formTemplate.getId());
+        resultData.addProperty("status", formTemplate.getStatus().name());
         resultData.addProperty("name", formTemplate.getName());
-        resultData.addProperty("value", formTemplate.getTotalValue());
         List<Fixture> fixtures = fixtureRepository.findByFormTemplateOrderByDateAscTimeAsc(formTemplateRepository.findById(formId).get());
         resultData.addProperty("matches", getFixtureData(fixtures));
         return resultData;
     }
 
     @Override
-    public List<ResultData> createFormTemplate(List matchIds, FormTemplateType type)
+    public List<ResultData> createFormTemplate(List matchIds, FormTemplateType formTemplateType)
     {
-        long count = formTemplateRepository.countByType(type) + 1;
-        String name = "مسابقه " + (type.equals(FormTemplateType.GOLD) ? "طلایی" : type.equals(FormTemplateType.SILVER) ? "نقره ای" : "برنزی") + " شماره " + Utills.addLeadingZeros(5, count);
-        FormTemplate formTemplate = formTemplateRepository.save(new FormTemplate(name, type));
+        long count = formTemplateRepository.countByType(formTemplateType) + 1;
+        String type = "مسابقه برنزی ";
+        if (formTemplateType == FormTemplateType.GOLD)
+            type = "مسابقه طلایی ";
+        else if (formTemplateType == FormTemplateType.SILVER)
+            type = "مسابقه نقره ای ";
+        String name = type + " " +  Utills.addLeadingZeros(7, count, true, false, true);
+        FormTemplate formTemplate = formTemplateRepository.save(new FormTemplate(name, formTemplateType));
 
         for (Object id : matchIds)
         {
@@ -84,6 +127,29 @@ public class FormServiceImpl implements FormService
             fixtureRepository.save(fixture);
         }
         return liveScoreService.findAllFreeFixtures();
+    }
+
+    @Override
+    public ResultData deleteFormTemplate(Long id)
+    {
+        ResultData resultData = new ResultData(true, "Form Template is Deleted !!");
+        FormTemplate formTemplate = formTemplateRepository.findById(id).get();
+        for (Form form : formRepository.findByFormTemplate(formTemplate))
+        {
+            for (Match match : matchRepository.findByForm(form))
+                matchRepository.delete(match);
+            formRepository.delete(form);
+        }
+
+        for (Fixture fixture : fixtureRepository.findByFormTemplateOrderByDateAscTimeAsc(formTemplate))
+        {
+            fixture.setUsed(false);
+            fixture.setFormTemplate(null);
+            fixtureRepository.save(fixture);
+        }
+
+        formTemplateRepository.delete(formTemplate);
+        return resultData;
     }
 
     @Override
@@ -118,15 +184,20 @@ public class FormServiceImpl implements FormService
             }
 
             Long value = 100L;
-            if (counter > 10)
+            if (counter > 18)
             {
-                for (int i = 0; i < counter - 10; i++)
+                for (int i = 0; i < counter - 18; i++)
                     value = value * 2;
             }
 
             Account account = userService.findById(userId).getAccount();
             FormTemplate formTemplate = formTemplateRepository.findById(formTemplateId).get();
-            String name = "فرم شماره " + Utills.addLeadingZeros(3, formRepository.countByAccount(account) + 1);
+            String type = "فرم برنزی ";
+            if (formTemplate.getType() == FormTemplateType.GOLD)
+                type = "فرم طلایی ";
+            else if (formTemplate.getType() == FormTemplateType.SILVER)
+                type = "فرم نقره ای ";
+            String name = type + Utills.addLeadingZeros(7, formRepository.countByAccount(account) + 1, true, true, true);
             Form form = new Form(name, LocalDate.now(ZoneId.of("Asia/Tehran")), LocalTime.now(ZoneId.of("Asia/Tehran")), FormStatus.REGISTERED, formTemplate);
             form.setValue(value);
             form.setAccount(account);
@@ -266,7 +337,7 @@ public class FormServiceImpl implements FormService
     @Override
     public Long getFormTemplatesCount(List<FormTemplateStatus> statuses, String challengeType)
     {
-        if(challengeType == null || challengeType.equals("ALL"))
+        if (challengeType == null || challengeType.equals("ALL"))
             return formTemplateRepository.countByStatusIn(statuses);
         return formTemplateRepository.countByStatusInAndType(statuses, FormTemplateType.valueOf(challengeType));
     }
@@ -428,5 +499,45 @@ public class FormServiceImpl implements FormService
                     data.addProperty("score", match.isScore());
                 }
         return formTemplateData;
+    }
+
+    public ResponseEntity<InputStreamResource> downloadPhotoCal(Long formTemplateId) throws FileNotFoundException
+    {
+        FormTemplate formTemplate = formTemplateRepository.findById(formTemplateId).get();
+        String fileName = "PhotoCal_" + formTemplate.getType().name() + "_" + formTemplate.getId() + ".pdf";
+        String desttination = "D://coin/photoCal/" + fileName;
+
+        HttpHeaders respHeaders = new HttpHeaders();
+        respHeaders.setContentType(MediaType.APPLICATION_PDF);
+        respHeaders.add("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+        InputStreamResource isr = new InputStreamResource(new FileInputStream(desttination));
+        return new ResponseEntity(isr, respHeaders, HttpStatus.OK);
+    }
+
+    private String escapeNonAscii(String str)
+    {
+        StringBuilder retStr = new StringBuilder();
+        for (int i = 0; i < str.length(); i++)
+        {
+            int cp = Character.codePointAt(str, i);
+            int charCount = Character.charCount(cp);
+            if (charCount > 1)
+            {
+                i += charCount - 1; // 2.
+                if (i >= str.length())
+                {
+                    throw new IllegalArgumentException("truncated unexpectedly");
+                }
+            }
+
+            if (cp < 128)
+            {
+                retStr.appendCodePoint(cp);
+            } else
+            {
+                retStr.append("\\").append(String.format("u0%x", cp));
+            }
+        }
+        return retStr.toString();
     }
 }

@@ -1,5 +1,6 @@
 package com.coin.app.service;
 
+import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.Set;
 
@@ -9,6 +10,8 @@ import com.coin.app.model.enums.FormTemplateStatus;
 import com.coin.app.model.enums.FormTemplateType;
 import com.coin.app.model.livescore.Form;
 import com.coin.app.model.livescore.FormTemplate;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.ResponseEntity;
 import reactor.core.publisher.Flux;
 
 public interface FormService
@@ -16,6 +19,8 @@ public interface FormService
     ResultData findFormTemplate(Long formId);
 
     List<ResultData>  createFormTemplate(List matchIds, FormTemplateType type);
+
+    ResultData  deleteFormTemplate(Long id);
 
     ResultData  createForm(Long formTemplateId, Long userId, List<ResultData> matchesData);
 
@@ -40,4 +45,6 @@ public interface FormService
     ResultData findUserFormData(Long formId);
 
     ResultData findUserFormData(Long formId, List<FormStatus> statuses);
+
+    ResponseEntity<InputStreamResource> downloadPhotoCal(Long formTemplateId) throws FileNotFoundException;
 }

@@ -117,7 +117,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
     {
         List<ResultData> results = new ArrayList<>();
 
-        List<Fixture> fixtures = fixtureRepository.findByUsedAndLocalDateGreaterThanOrderByDateAscTimeAsc(false, LocalDate.now());
+        List<Fixture> fixtures = fixtureRepository.findByUsedAndStatusIsAndLocalDateGreaterThanOrderByDateAscTimeAsc(false, FixtureStatus.NS, LocalDate.now());
 
         for (Fixture fixture : fixtures)
         {

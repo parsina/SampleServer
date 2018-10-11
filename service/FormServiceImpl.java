@@ -111,12 +111,12 @@ public class FormServiceImpl implements FormService
     public List<ResultData> createFormTemplate(List matchIds, FormTemplateType formTemplateType)
     {
         long count = formTemplateRepository.countByType(formTemplateType) + 1;
-        String type = "مسابقه برنزی ";
+        String name = "مسابقه برنزی شماره " + count;
         if (formTemplateType == FormTemplateType.GOLD)
-            type = "مسابقه طلایی ";
+            name = "مسابقه طلایی شماره " + count;
         else if (formTemplateType == FormTemplateType.SILVER)
-            type = "مسابقه نقره ای ";
-        String name = type + " " +  Utills.addLeadingZeros(7, count, true, false, true);
+            name = "مسابقه نقره ای شماره " + count;
+//        String name = type + " " +  Utills.addLeadingZeros(5, count, true);
         FormTemplate formTemplate = formTemplateRepository.save(new FormTemplate(name, formTemplateType));
 
         for (Object id : matchIds)
@@ -192,12 +192,12 @@ public class FormServiceImpl implements FormService
 
             Account account = userService.findById(userId).getAccount();
             FormTemplate formTemplate = formTemplateRepository.findById(formTemplateId).get();
-            String type = "فرم برنزی ";
+            String name = "BRZ-" + formTemplate.getName().split(" ")[3] + "-" + (formRepository.countByAccount(account) + 1);
             if (formTemplate.getType() == FormTemplateType.GOLD)
-                type = "فرم طلایی ";
+                name = "GLD-" + formTemplate.getName().split(" ")[3] + "-" + (formRepository.countByAccount(account) + 1);
             else if (formTemplate.getType() == FormTemplateType.SILVER)
-                type = "فرم نقره ای ";
-            String name = type + Utills.addLeadingZeros(7, formRepository.countByAccount(account) + 1, true, true, true);
+                name = "SLV-" + formTemplate.getName().split(" ")[3] + "-" + (formRepository.countByAccount(account) + 1);
+//            String name = type + Utills.addLeadingZeros(5, , true);
             Form form = new Form(name, LocalDate.now(ZoneId.of("Asia/Tehran")), LocalTime.now(ZoneId.of("Asia/Tehran")), FormStatus.REGISTERED, formTemplate);
             form.setValue(value);
             form.setAccount(account);
@@ -256,9 +256,9 @@ public class FormServiceImpl implements FormService
             }
 
             Long value = 100L;
-            if (counter > 10)
+            if (counter > 18)
             {
-                for (int i = 0; i < counter - 10; i++)
+                for (int i = 0; i < counter - 18; i++)
                     value = value * 2;
             }
 

@@ -87,23 +87,12 @@ public class Utills
         return time.split(":")[0] + ":" + time.split(":")[1];
     }
 
-    public static String addLeadingZeros(int count, long num, boolean split, boolean randomNumber, boolean reverse)
+    public static String addLeadingZeros(int count, long num, boolean split)
     {
-        Random randomNum = new Random();
-        int min = 1, max = 10;
-        for (int i = (count + 1) / 2; i > 1; i--)
-        {
-            min = min * 10;
-            max = max * 10;
-        }
-        int rnum = min + randomNum.nextInt(max - min - 1);
         String str = String.format("%0" + (count + 1) + "d", num);
         String part1 = str.substring(0, (count + 1) / 2);
         String part2 = str.substring((count + 1) / 2, str.length());
-        if (reverse)
-            return part2 + (split ? "-" : "") + (randomNumber ? "-" + rnum : "") + part1;
-        else
-            return part1 + (randomNumber ? "-" + rnum : "") + (split ? "-" : "") + part2;
+        return part2 + (split ? "-" : "") + part1;
     }
 
     public static String createPhotoCalPDF(Long formTemplateId, List<User> userList)

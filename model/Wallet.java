@@ -45,8 +45,4 @@ public class Wallet
     private @NonNull String address;
 
     private String description;
-
-    @OneToMany
-    @JoinColumn(name = "wallet_id")
-    private List<CoinAmount> coinAmounts;
 }

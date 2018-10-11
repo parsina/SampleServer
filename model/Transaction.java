@@ -43,12 +43,7 @@ public class Transaction
 
     private String fee;
 
-    private @NotNull String totalValueCoin;
-
     private @NotNull Long totalValue;
-
-    @OneToOne
-    private CoinAmount coinAmount;
 
     @ManyToOne
     private @NotNull Account account;

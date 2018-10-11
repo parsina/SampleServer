@@ -1,11 +1,9 @@
 package com.coin.app.service;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-import com.coin.app.common.DeviceProvider;
 import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.User;
 import com.coin.app.model.enums.UserRole;
@@ -13,21 +11,15 @@ import com.coin.app.model.enums.UserStatus;
 import com.coin.app.repository.UserRepository;
 import com.coin.app.security.JwtTokenProvider;
 import com.coin.app.security.UserPrincipal;
-import com.coin.app.security.payload.JwtAuthenticationResponse;
 import com.coin.app.service.mail.EmailService;
 import com.coin.app.util.Validator;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 @Service
 public class UserServiceImpl implements UserService

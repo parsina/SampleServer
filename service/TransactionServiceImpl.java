@@ -28,7 +28,6 @@ public class TransactionServiceImpl implements TransactionService
         }
         transaction.setFee(fee);
         transaction.setTotalValue(value);
-        transaction.setTotalValueCoin(coinValue);
         transaction.setAccount(account);
         transaction.setStatus(status);
         transaction.setType(type);

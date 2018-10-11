@@ -1,4 +1,4 @@
-package com.coin.app.model.single;
+package com.coin.app.model.livescore.single;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;

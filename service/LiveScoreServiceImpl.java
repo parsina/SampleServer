@@ -11,13 +11,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.xml.bind.Element;
-
 import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.livescore.Fixture;
 import com.coin.app.model.enums.FixtureStatus;
-import com.coin.app.model.single.Book;
-import com.coin.app.model.single.BookData;
+import com.coin.app.model.livescore.single.Book;
+import com.coin.app.model.livescore.single.BookData;
 import com.coin.app.repository.BookDataRepository;
 import com.coin.app.repository.BookRepository;
 import com.coin.app.repository.FixtureRepository;
@@ -29,7 +27,6 @@ import com.google.gson.JsonParser;
 import ir.huri.jcal.JalaliCalendar;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service

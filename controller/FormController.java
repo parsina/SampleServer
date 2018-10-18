@@ -69,6 +69,13 @@ public class FormController
         return formService.deleteFormTemplate(Long.valueOf(input.get("formTemplateId").toString()));
     }
 
+    @Secured({"ROLE_ADMIN", "ROLE_USER"})
+    @PostMapping("/deleteUserForm")
+    public ResultData deleteUserForm(@RequestBody Map<String, ?> input)
+    {
+        return formService.deleteUserForm(Long.valueOf(input.get("formId").toString()));
+    }
+
     @GetMapping("/formTemplates")
     public List<ResultData> formTemplates()
     {

@@ -45,18 +45,16 @@ public class User
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private @NonNull String username;
+    private String username;
 
     @JsonIgnore
-    private @NonNull String password;
+    private String password;
 
     private @NonNull String email;
 
-    private @NotNull Date createdDate;
+    private Date createdDate;
 
     private @NonNull Long parentId;
-
-    private boolean enabled = true;
 
     private @NotNull String confirmationToken;
 
@@ -81,14 +79,5 @@ public class User
 
     public User()
     {
-    }
-
-    public User(String email, String password)
-    {
-        this.email = email;
-        this.password = password;
-        this.createdDate = new Date();
-        this.role = UserRole.ROLE_USER;
-        this.status = UserStatus.INACTIVE;
     }
 }

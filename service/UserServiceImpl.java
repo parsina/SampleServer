@@ -40,6 +40,9 @@ public class UserServiceImpl implements UserService
     private JwtTokenProvider jwtTokenProvider;
 
     @Autowired
+    private BitcoinJService bitcoinJService;
+
+    @Autowired
     private AccountService accountService;
 
     @Override
@@ -60,36 +63,50 @@ public class UserServiceImpl implements UserService
 
         if (emailIsValid && passworIsValid && passwordMatched)
         {
-            User user = userRepository.findByEmail(email.toLowerCase());
+            User user = userRepository.findByUsername(username);
             if (user != null)
             {
-                result.setSuccess(true); // Should be removed
+                result.setSuccess(false);
+                result.setMessage("User Exist !");
+                return result;
+            }
+
+            user = userRepository.findByEmail(email.toLowerCase());
+            if (user != null && !user.getStatus().equals(UserStatus.INVITED))
+            {
+                result.setSuccess(false); // Should be removed
                 result.setMessage("User Exist !");
                 result.addProperty("userEmail", user.getEmail()); // Should be removed
                 return result;
             }
-
-            user = userRepository.findByUsername(username);
-            if (user != null)
+            else
+            if (user != null && user.getStatus().equals(UserStatus.INVITED))
             {
-                result.setSuccess(true); // Should be removed
-                result.setMessage("User Exist !");
-                result.addProperty("username", user.getUsername()); // Should be removed
-                return result;
+                user.setCreatedDate(new Date());
+                user.setUsername(username);
+                user.setPassword(passwordEncoder.encode(password));
+                user.setStatus(UserStatus.INACTIVE);
+                user.setConfirmationToken(UUID.randomUUID().toString());
+                userRepository.save(user);
+                result.setSuccess(true);
+                result.setMessage("Invited User Created !");
             }
-            user = new User();
-            user.setCreatedDate(new Date());
-            user.setParentId(-1L);
-            user.setEmail(email.toLowerCase());
-            user.setUsername(username);
-            user.setPassword(passwordEncoder.encode(password));
-            user.setStatus(UserStatus.INACTIVE);
-            user.setRole(UserRole.ROLE_USER);
-            user.setConfirmationToken(UUID.randomUUID().toString());
-            userRepository.save(user);
-            result.setSuccess(true);
-            result.setMessage("User Created !");
-            result.addProperty("userEmail", user.getEmail());
+            else
+            {
+                user = new User();
+                user.setCreatedDate(new Date());
+                user.setParentId(-1L);
+                user.setEmail(email.toLowerCase());
+                user.setUsername(username);
+                user.setPassword(passwordEncoder.encode(password));
+                user.setStatus(UserStatus.INACTIVE);
+                user.setRole(UserRole.ROLE_USER);
+                user.setConfirmationToken(UUID.randomUUID().toString());
+                userRepository.save(user);
+                result.setSuccess(true);
+                result.setMessage("New User Created !");
+                result.addProperty("userEmail", user.getEmail());
+            }
         }
         return result;
     }
@@ -149,7 +166,6 @@ public class UserServiceImpl implements UserService
 
             String jwt = jwtTokenProvider.generateToken(authentication);
 //            return ResponseEntity.ok(new JwtAuthenticationResponse(jwt));
-
 
             result.setSuccess(true);
             result.setMessage("User loged in !");

@@ -1,5 +1,7 @@
 package com.coin.app.service;
 
+import java.util.Date;
+
 import com.coin.app.model.User;
 import com.coin.app.model.Wallet;
 import com.coin.app.repository.WalletRepository;
@@ -18,7 +20,13 @@ public class WalletServiceImpl implements WalletService
     @Override
     public Wallet createWallet(User user)
     {
-        return walletRepository.save(bitcoinJService.initializeWallet(user));
+        Wallet wallet = new com.coin.app.model.Wallet();
+        wallet.setCreatedDate(new Date());
+        wallet.setName(user.getEmail());
+        wallet.setBalance("0");
+        wallet.setRealBalance("0");
+        wallet.setAddress(bitcoinJService.getNewWalletAddress());
+        return walletRepository.save(wallet);
     }
 
     @Override

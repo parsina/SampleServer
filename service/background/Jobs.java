@@ -24,6 +24,7 @@ import com.coin.app.repository.FormRepository;
 import com.coin.app.repository.FormTemplateRepository;
 import com.coin.app.repository.MatchRepository;
 import com.coin.app.repository.WinnerRepository;
+import com.coin.app.service.BitcoinJService;
 import com.coin.app.service.LiveScoreService;
 import com.coin.app.util.Utills;
 import com.itextpdf.text.BaseColor;
@@ -64,6 +65,9 @@ public class Jobs extends TimerTask
     @Autowired
     private WinnerRepository winnerRepository;
 
+    @Autowired
+    private BitcoinJService bitcoinJService;
+
     private LocalDate date = LocalDate.now(ZoneId.of("Asia/Tehran")).minusDays(0);
 
     //    @Async
@@ -80,14 +84,20 @@ public class Jobs extends TimerTask
             date = LocalDate.now(ZoneId.of("Asia/Tehran"));
         }
 
+        //Update Wallet Transaction Status
+        bitcoinJService.updateWalletJob();
+
+        //Update winners
         List<FormTemplateStatus> formTemplateStatuses = new ArrayList<>();
         formTemplateStatuses.add(FormTemplateStatus.PASSED);
 
-        //Update winners
-        for (FormTemplate formTemplate : formTemplateRepository.findAllByStatusIsIn(formTemplateStatuses))
+        for (FormTemplate formTemplate : formTemplateRepository.findAllByStatusIsInOrderByCreatedDateAsc(formTemplateStatuses))
             if (winnerRepository.countByFormFormTemplate(formTemplate) == 0)
                 findWinners(formTemplate);
 
+
+        // Updates fixture data every 1 min to detect the changes in used fixtures and save data to push them to users
+//        for (Fixture fixture : fixtureRepository.findByUsedAndLocalDateEqualsAndStatusIsNotInAndFormTemplateStatusIsInOrderByDateAscTimeAsc(true, LocalDate.now(), fixtureStatuses, formTemplateStatuses))
         formTemplateStatuses = new ArrayList<>();
         formTemplateStatuses.add(FormTemplateStatus.OPEN);
         formTemplateStatuses.add(FormTemplateStatus.CLOSE);
@@ -96,9 +106,6 @@ public class Jobs extends TimerTask
         fixtureStatuses.add(FixtureStatus.FT);
         fixtureStatuses.add(FixtureStatus.CANCEL);
 
-
-        // Updates fixture data every 1 min to detect the changes in used fixtures and save data to push them to users
-//        for (Fixture fixture : fixtureRepository.findByUsedAndLocalDateEqualsAndStatusIsNotInAndFormTemplateStatusIsInOrderByDateAscTimeAsc(true, LocalDate.now(), fixtureStatuses, formTemplateStatuses))
         for (Fixture fixture : fixtureRepository.findByUsedAndLocalDateEqualsAndStatusIsNotInAndFormTemplateStatusIsInOrderByDateAscTimeAsc(true, LocalDate.now(), fixtureStatuses, formTemplateStatuses))
         {
             if (!fixture.getStatus().equals(FixtureStatus.FT) && !fixture.getStatus().equals(FixtureStatus.CANCEL))
@@ -179,6 +186,7 @@ public class Jobs extends TimerTask
             formTemplate.setTotalValue(totalValue);
             formTemplateRepository.save(formTemplate);
         }
+
         System.out.println(" >>>>>>>>  Minute Jobs ends: " + LocalTime.now() + "\n");
     }
 

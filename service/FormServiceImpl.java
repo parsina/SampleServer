@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,9 +20,13 @@ import javax.swing.border.Border;
 
 import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.Account;
+import com.coin.app.model.Transaction;
 import com.coin.app.model.User;
+import com.coin.app.model.Wallet;
 import com.coin.app.model.enums.FixtureStatus;
 import com.coin.app.model.enums.FormTemplateType;
+import com.coin.app.model.enums.TransactionStatus;
+import com.coin.app.model.enums.TransactionType;
 import com.coin.app.model.livescore.Fixture;
 import com.coin.app.model.livescore.Form;
 import com.coin.app.model.enums.FormStatus;
@@ -32,7 +37,9 @@ import com.coin.app.repository.FixtureRepository;
 import com.coin.app.repository.FormRepository;
 import com.coin.app.repository.FormTemplateRepository;
 import com.coin.app.repository.MatchRepository;
+import com.coin.app.repository.TransactionRepository;
 import com.coin.app.repository.UserRepository;
+import com.coin.app.repository.WalletRepository;
 import com.coin.app.util.Utills;
 import com.itextpdf.text.BaseColor;
 import com.itextpdf.text.Chunk;
@@ -92,6 +99,12 @@ public class FormServiceImpl implements FormService
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private TransactionRepository transactionRepository;
+
+    @Autowired
+    private WalletRepository walletRepository;
+
     @Override
     public ResultData findFormTemplate(Long formId)
     {
@@ -102,6 +115,7 @@ public class FormServiceImpl implements FormService
         resultData.addProperty("id", formTemplate.getId());
         resultData.addProperty("status", formTemplate.getStatus().name());
         resultData.addProperty("name", formTemplate.getName());
+        resultData.addProperty("type", formTemplate.getType());
         List<Fixture> fixtures = fixtureRepository.findByFormTemplateOrderByDateAscTimeAsc(formTemplateRepository.findById(formId).get());
         resultData.addProperty("matches", getFixtureData(fixtures));
         return resultData;
@@ -116,7 +130,6 @@ public class FormServiceImpl implements FormService
             name = "مسابقه طلایی شماره " + count;
         else if (formTemplateType == FormTemplateType.SILVER)
             name = "مسابقه نقره ای شماره " + count;
-//        String name = type + " " +  Utills.addLeadingZeros(5, count, true);
         FormTemplate formTemplate = formTemplateRepository.save(new FormTemplate(name, formTemplateType));
 
         for (Object id : matchIds)
@@ -132,23 +145,56 @@ public class FormServiceImpl implements FormService
     @Override
     public ResultData deleteFormTemplate(Long id)
     {
-        ResultData resultData = new ResultData(true, "Form Template is Deleted !!");
-        FormTemplate formTemplate = formTemplateRepository.findById(id).get();
-        for (Form form : formRepository.findByFormTemplate(formTemplate))
+        ResultData resultData = new ResultData(false, "There is a problem on deleting form template !");
+        if (userService.isAuthenticated(userService.getCurrentUser().getId()))
         {
-            for (Match match : matchRepository.findByForm(form))
-                matchRepository.delete(match);
-            formRepository.delete(form);
+            FormTemplate formTemplate = formTemplateRepository.findById(id).get();
+            if (formTemplate.getStatus().equals(FormTemplateStatus.OPEN))
+            {
+                for (Form form : formRepository.findByFormTemplate(formTemplate))
+                {
+                    for (Match match : matchRepository.findByForm(form))
+                        matchRepository.delete(match);
+                    deleteUserForm(form.getId());
+                }
+
+                for (Fixture fixture : fixtureRepository.findByFormTemplateOrderByDateAscTimeAsc(formTemplate))
+                {
+                    fixture.setUsed(false);
+                    fixture.setFormTemplate(null);
+                    fixtureRepository.save(fixture);
+                }
+
+                resultData.setSuccess(true);
+                resultData.setMessage("Form Template is Deleted !");
+
+                formTemplateRepository.delete(formTemplate);
+            }
+        }
+        return resultData;
+    }
+
+    public ResultData deleteUserForm(Long formId)
+    {
+        ResultData resultData = new ResultData(false, "There is a problem on deleting form !");
+
+        if (userService.isAuthenticated(userService.getCurrentUser().getId()))
+        {
+            Form form = formRepository.findById(formId).get();
+            if (form.getStatus().equals(FormStatus.REGISTERED))
+            {
+                Transaction transaction = transactionRepository.findByTxId("FAT-" + form.getId() + "-" + form.getAccount().getId() + "-" + form.getFormTemplate().getId());
+                transactionRepository.delete(transaction);
+                Wallet wallet = walletRepository.findById(form.getAccount().getWallet().getId()).get();
+                wallet.setBalance((Long.valueOf(wallet.getBalance()) + form.getValue()) + "");
+                walletRepository.save(wallet);
+                formRepository.delete(form);
+                resultData.setSuccess(true);
+                resultData.setMessage("Form is deleted !");
+                resultData.addProperty("accountBalance", wallet.getBalance());
+            }
         }
 
-        for (Fixture fixture : fixtureRepository.findByFormTemplateOrderByDateAscTimeAsc(formTemplate))
-        {
-            fixture.setUsed(false);
-            fixture.setFormTemplate(null);
-            fixtureRepository.save(fixture);
-        }
-
-        formTemplateRepository.delete(formTemplate);
         return resultData;
     }
 
@@ -191,17 +237,43 @@ public class FormServiceImpl implements FormService
             }
 
             Account account = userService.findById(userId).getAccount();
+
+            //Checking account balance
+            if (value > Long.valueOf(account.getWallet().getBalance()))
+            {
+                resultData.setMessage("Account balance is not enough !");
+                return resultData;
+            }
+
+            long formCounts = formRepository.countByAccount(account) + 1;
             FormTemplate formTemplate = formTemplateRepository.findById(formTemplateId).get();
-            String name = "BRZ-" + formTemplate.getName().split(" ")[3] + "-" + (formRepository.countByAccount(account) + 1);
+            String name = "BRZ-" + formTemplateRepository.countByType(formTemplate.getType()) + "-" + formCounts;
             if (formTemplate.getType() == FormTemplateType.GOLD)
-                name = "GLD-" + formTemplate.getName().split(" ")[3] + "-" + (formRepository.countByAccount(account) + 1);
+                name = "GLD-" + formTemplateRepository.countByType(formTemplate.getType()) + "-" + formCounts;
             else if (formTemplate.getType() == FormTemplateType.SILVER)
-                name = "SLV-" + formTemplate.getName().split(" ")[3] + "-" + (formRepository.countByAccount(account) + 1);
-//            String name = type + Utills.addLeadingZeros(5, , true);
+                name = "SLV-" + formTemplateRepository.countByType(formTemplate.getType()) + "-" + formCounts;
+
             Form form = new Form(name, LocalDate.now(ZoneId.of("Asia/Tehran")), LocalTime.now(ZoneId.of("Asia/Tehran")), FormStatus.REGISTERED, formTemplate);
             form.setValue(value);
             form.setAccount(account);
-            formRepository.save(form);
+            form = formRepository.save(form);
+
+            //Create transaction
+            Transaction transaction = new Transaction();
+            transaction.setCreatedDate(new Date());
+            transaction.setUpdateDate(new Date());
+            transaction.setStatus(TransactionStatus.CONFIRMED);
+            transaction.setType(TransactionType.COST);
+            transaction.setAccount(account);
+            transaction.setTotalValue(value);
+            transaction.setTxId("FAT-" + form.getId() + "-" + account.getId() + "-" + formTemplate.getId());
+            transaction.setDescription(formTemplate.getName() + "-" + formCounts);
+            transactionRepository.save(transaction);
+
+            //Update User Account Wallet
+            account.getWallet().setBalance((Long.valueOf(account.getWallet().getBalance()) - value) + "");
+            walletRepository.save(account.getWallet());
+
 
             for (Object matchData : matchesData)
             {
@@ -218,7 +290,7 @@ public class FormServiceImpl implements FormService
 
             resultData.setSuccess(true);
             resultData.setMessage("Form is submitted !");
-            return resultData;
+            resultData.addProperty("accountBalance", account.getWallet().getBalance());
         } else
             resultData.setMessage("User is not allowed to create form !");
         return resultData;
@@ -263,10 +335,31 @@ public class FormServiceImpl implements FormService
             }
 
             Form form = formRepository.findById(formId).get();
+
+            Account account = userService.findById(userId).getAccount();
+            account.getWallet().setBalance((Long.valueOf(account.getWallet().getBalance()) + form.getValue()) + "");
+
+            //Checking account balance
+            if (value > Long.valueOf(account.getWallet().getBalance()))
+            {
+                resultData.setMessage("Account balance is not enough !");
+                return resultData;
+            }
+
             form.setValue(value);
             formRepository.save(form);
-            List<Match> matches = matchRepository.findByForm(form);
 
+            //Update transaction
+            Transaction transaction = transactionRepository.findByTxId("FAT-" + form.getId() + "-" + form.getAccount().getId() + "-" + form.getFormTemplate().getId());
+            transaction.setUpdateDate(new Date());
+            transaction.setTotalValue(value);
+            transactionRepository.save(transaction);
+
+            //Update User Account Wallet
+            account.getWallet().setBalance((Long.valueOf(account.getWallet().getBalance()) - value) + "");
+            walletRepository.save(account.getWallet());
+
+            List<Match> matches = matchRepository.findByForm(form);
             for (Object matchData : matchesData)
             {
                 Map data = ((Map) ((LinkedHashMap) matchData).get("properties"));
@@ -282,7 +375,7 @@ public class FormServiceImpl implements FormService
 
             resultData.setSuccess(true);
             resultData.setMessage("Form is submitted !");
-            return resultData;
+            resultData.addProperty("accountBalance", account.getWallet().getBalance());
         } else
             resultData.setMessage("User is not allowed to update form !");
         return resultData;
@@ -292,11 +385,12 @@ public class FormServiceImpl implements FormService
     public List<ResultData> findFormTemplatesByStatus(List<FormTemplateStatus> statuses)
     {
         List<ResultData> resultDataList = new ArrayList<>();
-        for (FormTemplate formTemplate : formTemplateRepository.findAllByStatusIsIn(statuses))
+        for (FormTemplate formTemplate : formTemplateRepository.findAllByStatusIsInOrderByCreatedDateAsc(statuses))
         {
             ResultData result = new ResultData(true, "");
             result.addProperty("id", formTemplate.getId());
             result.addProperty("name", formTemplate.getName());
+            result.addProperty("type", formTemplate.getType().name());
             resultDataList.add(result);
         }
         return resultDataList;

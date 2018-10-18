@@ -9,7 +9,9 @@ public interface BitcoinJService
 {
     void initialize();
 
-    Wallet initializeWallet(User user);
+    void initializeWallet();
 
-    void startCoinReceiveListener(Account account);
+    String getNewWalletAddress();
+
+    void updateWalletJob();
 }

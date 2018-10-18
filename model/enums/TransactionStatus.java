@@ -2,5 +2,5 @@ package com.coin.app.model.enums;
 
 public enum TransactionStatus
 {
-    UNCONFIRMED, CONFIRMED, FAILED
+    UNCONFIRMED, CONFIRMED, FAILED, DELETED
 }

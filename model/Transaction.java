@@ -39,6 +39,8 @@ public class Transaction
 
     private @NotNull Date createdDate;
 
+    private @NotNull Date updateDate;
+
     private @NonNull String txId;
 
     private String fee;

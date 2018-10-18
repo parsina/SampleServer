@@ -33,6 +33,7 @@ public class AccountServiceImpl implements AccountService
         account.setCreatedDate(new Date());
         account.setStatus(AccountStatus.INACTIVE);
         account.setWallet(walletService.createWallet(user));
+        account.setUser(user);
         return accountRepository.save(account);
     }
 

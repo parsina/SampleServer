@@ -48,7 +48,6 @@ public class AccountServiceImpl implements AccountService
             data.addProperty("accountId", account.getId());
             data.addProperty("accountStatus", account.getStatus());
             data.addProperty("walletAddress", account.getWallet().getAddress());
-            data.addProperty("realBalance", account.getWallet().getRealBalance());
             data.addProperty("balance", account.getWallet().getBalance());
             return data;
         }

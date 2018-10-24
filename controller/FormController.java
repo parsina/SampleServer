@@ -157,14 +157,14 @@ public class FormController
     @PostMapping("/createForm")
     public ResultData createForm(@RequestBody Map<String, Object> input)
     {
-        return formService.createForm(Long.valueOf(input.get("formTemplateId").toString()), Long.valueOf(input.get("userId").toString()),  (List<ResultData>) input.get("formData"));
+        return formService.createForm(Long.valueOf(input.get("formTemplateId").toString()), Long.valueOf(input.get("userId").toString()), Boolean.valueOf(input.get("real").toString()), (List<ResultData>) input.get("formData"));
     }
 
     @Secured({"ROLE_ADMIN", "ROLE_USER"})
     @PostMapping("/updateForm")
     public ResultData updateForm(@RequestBody Map<String, Object> input)
     {
-        return formService.updateForm(Long.valueOf(input.get("formId").toString()), Long.valueOf(input.get("userId").toString()),  (List<ResultData>) input.get("formData"));
+        return formService.updateForm(Long.valueOf(input.get("formId").toString()), Long.valueOf(input.get("userId").toString()), Boolean.valueOf(input.get("real").toString()), (List<ResultData>) input.get("formData"));
     }
 
     @Secured({"ROLE_ADMIN", "ROLE_USER"})

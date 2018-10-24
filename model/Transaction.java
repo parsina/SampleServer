@@ -1,5 +1,7 @@
 package com.coin.app.model;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Date;
 
 import javax.persistence.Column;
@@ -37,9 +39,13 @@ public class Transaction
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private @NotNull Date createdDate;
+    private @NotNull LocalDate createdDate;
 
-    private @NotNull Date updateDate;
+    private @NotNull LocalDate updateDate;
+
+    private @NotNull LocalTime createdTime;
+
+    private @NotNull LocalTime updateTime;
 
     private @NonNull String txId;
 

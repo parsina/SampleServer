@@ -1,8 +1,12 @@
 package com.coin.app.service;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDate;
@@ -10,7 +14,9 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
+import com.coin.app.CoinServerApplication;
 import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.livescore.Fixture;
 import com.coin.app.model.enums.FixtureStatus;
@@ -47,11 +53,14 @@ public class LiveScoreServiceImpl implements LiveScoreService
     @Autowired
     private BookDataRepository bookDataRepository;
 
+    Properties props = new Properties();
+    String path = Thread.currentThread().getContextClassLoader().getResource("").getPath();
+
     @Override
     public void loadFixtures()
     {
-        String fDate = LocalDate.now().minusDays(0).toString();
-        String tDate = LocalDate.now().plusDays(10).toString();
+        String fDate = LocalDate.now().minusDays(10).toString();
+        String tDate = LocalDate.now().plusDays(50).toString();
 
         String uri = this.root + "fixtures/between/" + fDate + "/" + tDate + "?api_token=" + this.key + "&include=localTeam,visitorTeam,league,inplay";
         String content = fetchContent(uri);
@@ -68,7 +77,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
     public void loadFixtureBooks()
     {
         List<Fixture> fixtures = fixtureRepository.findByLocalDateGreaterThanOrderByDateAscTimeAsc(LocalDate.now().minusDays(1));
-        for(Fixture fixture : fixtures)
+        for (Fixture fixture : fixtures)
         {
             String uri = this.root + "odds/fixture/" + fixture.getId() + "/bookmaker/2?api_token=" + this.key;
             String content = fetchContent(uri);
@@ -85,7 +94,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
                     book = bookRepository.save(book);
 
                     JsonArray bookMakerArr = element.getAsJsonObject().get("bookmaker").getAsJsonObject().get("data").getAsJsonArray().get(0).getAsJsonObject().get("odds").getAsJsonObject().get("data").getAsJsonArray();
-                    for(JsonElement maker : bookMakerArr )
+                    for (JsonElement maker : bookMakerArr)
                     {
                         BookData bookData = new BookData();
                         bookData.setLabel(maker.getAsJsonObject().get("label") == null ? null : maker.getAsJsonObject().get("label").toString());
@@ -97,7 +106,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
                         bookData.setTotal(maker.getAsJsonObject().get("total") == null ? null : maker.getAsJsonObject().get("total").toString());
                         bookData.setEventId(maker.getAsJsonObject().get("bookmaker_event_id") == null ? null : maker.getAsJsonObject().get("bookmaker_event_id").toString());
                         String date = maker.getAsJsonObject().get("last_update").getAsJsonObject().get("date").toString().substring(1).split(" ")[0];
-                        String time = maker.getAsJsonObject().get("last_update").getAsJsonObject().get("date").toString().split(" ")[1].substring(0,8);
+                        String time = maker.getAsJsonObject().get("last_update").getAsJsonObject().get("date").toString().split(" ")[1].substring(0, 8);
                         bookData.setLastUpdateDate(LocalDate.parse(date));
                         bookData.setLastUpdateTime(LocalTime.parse(time));
                         bookData.setBook(book);
@@ -140,7 +149,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
     {
         String uri = this.root + "fixtures/multi/" + fixtureIds + "?api_token=" + this.key + "&include=localTeam,visitorTeam,league,goals,inplay";
         String content = fetchContent(uri);
-        if(content != null)
+        if (content != null)
         {
             JsonObject fixtureObject = toJsonObject(content);
             if (fixtureObject.get("data") != null)
@@ -172,9 +181,9 @@ public class LiveScoreServiceImpl implements LiveScoreService
         fixture.setMinute(fixtureObject.get("time").getAsJsonObject().get("minute").isJsonNull() ? null : fixtureObject.get("time").getAsJsonObject().get("minute").getAsString());
         fixture.setExtraTime(fixtureObject.get("time").getAsJsonObject().get("extra_minute").isJsonNull() ? null : fixtureObject.get("time").getAsJsonObject().get("extra_minute").getAsString());
         fixture.setAddedTime(fixtureObject.get("time").getAsJsonObject().get("added_time").isJsonNull() ? null : fixtureObject.get("time").getAsJsonObject().get("added_time").getAsString());
-        fixture.setHalfTimeScore(fixtureObject.get("scores").getAsJsonObject().get("ht_score").isJsonNull()? null : fixtureObject.get("scores").getAsJsonObject().get("ht_score").getAsString());
-        fixture.setFullTimeScore(fixtureObject.get("scores").getAsJsonObject().get("ft_score").isJsonNull()? null : fixtureObject.get("scores").getAsJsonObject().get("ft_score").getAsString());
-        fixture.setExtraTimeScore(fixtureObject.get("scores").getAsJsonObject().get("et_score").isJsonNull()? null : fixtureObject.get("scores").getAsJsonObject().get("et_score").getAsString());
+        fixture.setHalfTimeScore(fixtureObject.get("scores").getAsJsonObject().get("ht_score").isJsonNull() ? null : fixtureObject.get("scores").getAsJsonObject().get("ht_score").getAsString());
+        fixture.setFullTimeScore(fixtureObject.get("scores").getAsJsonObject().get("ft_score").isJsonNull() ? null : fixtureObject.get("scores").getAsJsonObject().get("ft_score").getAsString());
+        fixture.setExtraTimeScore(fixtureObject.get("scores").getAsJsonObject().get("et_score").isJsonNull() ? null : fixtureObject.get("scores").getAsJsonObject().get("et_score").getAsString());
 
         // Local Team Data
         fixture.setLocalTeamId(fixtureObject.get("localTeam").getAsJsonObject().get("data").getAsJsonObject().get("id").getAsLong());
@@ -209,6 +218,183 @@ public class LiveScoreServiceImpl implements LiveScoreService
         }
 
         fixtureRepository.save(fixture);
+    }
+
+    @Override
+    public List<ResultData> getCountries(boolean onlyWithFarsiName)
+    {
+        List<ResultData> countriesData = new ArrayList<>();
+        try
+        {
+            InputStream in = new FileInputStream(path + "country.properties");
+            props.load(in);
+
+            List<String> countries = new ArrayList<>();
+            countries.addAll(fixtureRepository.findLocalCountries());
+            for(String country : fixtureRepository.findVisitorCountries())
+                if(!countries.contains(country))
+                    countries.add(country);
+
+            for(String country : countries)
+            {
+                ResultData resultData = new ResultData(true, "");
+                if (props.get(country) == null)
+                {
+                    resultData.addProperty("name", country);
+                    resultData.addProperty("farsiName", "کشور");
+                }
+                else
+                    if(!onlyWithFarsiName)
+                    {
+                        resultData.addProperty("name", country);
+                        resultData.addProperty("farsiName", props.get(country));
+                    }
+                countriesData.add(resultData);
+            }
+
+        } catch (IOException ex)
+        {
+            ex.printStackTrace();
+        }
+
+        return countriesData;
+    }
+
+    @Override
+    public void saveCountry(String key, String value)
+    {
+        try
+        {
+            InputStream in = new FileInputStream(path + "country.properties");
+            props.load(in);
+            in.close();
+
+            FileOutputStream out = new FileOutputStream(path + "country.properties");
+            props.setProperty(key,value);
+            props.store(out, null);
+            out.close();
+
+        } catch (IOException ex)
+        {
+            ex.printStackTrace();
+        }
+    }
+
+    @Override
+    public List<ResultData> getLeagues(boolean onlyWithFarsiName)
+    {
+        List<ResultData> leaguesData = new ArrayList<>();
+        try
+        {
+            InputStream in = new FileInputStream(path + "league.properties");
+            props.load(in);
+
+            List<String> leagues = new ArrayList<>();
+            leagues.addAll(fixtureRepository.findLeages());
+
+            for(String league : leagues)
+            {
+                ResultData resultData = new ResultData(true, "");
+                if (props.get(league) == null)
+                {
+                    resultData.addProperty("name", league);
+                    resultData.addProperty("farsiName", "لیگ");
+                }
+                else
+                if(!onlyWithFarsiName)
+                {
+                    resultData.addProperty("name", league);
+                    resultData.addProperty("farsiName", props.get(league));
+                }
+                leaguesData.add(resultData);
+            }
+
+        } catch (IOException ex)
+        {
+            ex.printStackTrace();
+        }
+
+        return leaguesData;
+    }
+
+    @Override
+    public void saveLeague(String key, String value)
+    {
+        try
+        {
+            InputStream in = new FileInputStream(path + "league.properties");
+            props.load(in);
+            in.close();
+
+            FileOutputStream out = new FileOutputStream(path + "league.properties");
+            props.setProperty(key,value);
+            props.store(out, null);
+            out.close();
+
+        } catch (IOException ex)
+        {
+            ex.printStackTrace();
+        }
+    }
+
+    @Override
+    public List<ResultData> getTeams(boolean onlyWithFarsiName)
+    {
+        List<ResultData> teamsData = new ArrayList<>();
+        try
+        {
+            InputStream in = new FileInputStream(path + "team.properties");
+            props.load(in);
+
+            List<String> teams = new ArrayList<>();
+            teams.addAll(fixtureRepository.findLocalTeams());
+            for(String team : fixtureRepository.findVisitorTeams())
+                if(!teams.contains(team))
+                    teams.add(team);
+
+            for(String team : teams)
+            {
+                ResultData resultData = new ResultData(true, "");
+                if (props.get(team) == null)
+                {
+                    resultData.addProperty("name", team);
+                    resultData.addProperty("farsiName", "تیم");
+                }
+                else
+                if(!onlyWithFarsiName)
+                {
+                    resultData.addProperty("name", team);
+                    resultData.addProperty("farsiName", props.get(team));
+                }
+                teamsData.add(resultData);
+            }
+
+        } catch (IOException ex)
+        {
+            ex.printStackTrace();
+        }
+
+        return teamsData;
+    }
+
+    @Override
+    public void saveTeam(String key, String value)
+    {
+        try
+        {
+            InputStream in = new FileInputStream(path + "team.properties");
+            props.load(in);
+            in.close();
+
+            FileOutputStream out = new FileOutputStream(path + "team.properties");
+            props.setProperty(key,value);
+            props.store(out, null);
+            out.close();
+
+        } catch (IOException ex)
+        {
+            ex.printStackTrace();
+        }
     }
 
     private static String fetchContent(String uri)

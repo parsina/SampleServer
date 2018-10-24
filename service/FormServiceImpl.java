@@ -1,11 +1,7 @@
 package com.coin.app.service;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -16,14 +12,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.swing.border.Border;
-
 import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.Account;
 import com.coin.app.model.Transaction;
-import com.coin.app.model.User;
 import com.coin.app.model.Wallet;
-import com.coin.app.model.enums.FixtureStatus;
 import com.coin.app.model.enums.FormTemplateType;
 import com.coin.app.model.enums.TransactionStatus;
 import com.coin.app.model.enums.TransactionType;
@@ -41,21 +33,6 @@ import com.coin.app.repository.TransactionRepository;
 import com.coin.app.repository.UserRepository;
 import com.coin.app.repository.WalletRepository;
 import com.coin.app.util.Utills;
-import com.itextpdf.text.BaseColor;
-import com.itextpdf.text.Chunk;
-import com.itextpdf.text.Document;
-import com.itextpdf.text.Image;
-import com.itextpdf.text.Paragraph;
-import com.itextpdf.text.Rectangle;
-import com.itextpdf.text.html.WebColors;
-import com.itextpdf.text.pdf.Barcode128;
-import com.itextpdf.text.pdf.BaseFont;
-import com.itextpdf.text.pdf.ColumnText;
-import com.itextpdf.text.pdf.PdfAnnotation;
-import com.itextpdf.text.pdf.PdfContentByte;
-import com.itextpdf.text.pdf.PdfFormField;
-import com.itextpdf.text.pdf.draw.DottedLineSeparator;
-import com.itextpdf.text.pdf.draw.LineSeparator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.PageRequest;
@@ -65,15 +42,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-
-import com.itextpdf.text.DocumentException;
-import com.itextpdf.text.Element;
-import com.itextpdf.text.Font;
-import com.itextpdf.text.FontFactory;
-import com.itextpdf.text.Phrase;
-import com.itextpdf.text.pdf.PdfPCell;
-import com.itextpdf.text.pdf.PdfPTable;
-import com.itextpdf.text.pdf.PdfWriter;
 
 @Service
 public class FormServiceImpl implements FormService
@@ -183,11 +151,16 @@ public class FormServiceImpl implements FormService
             Form form = formRepository.findById(formId).get();
             if (form.getStatus().equals(FormStatus.REGISTERED))
             {
+                matchRepository.deleteAll(matchRepository.findByForm(form));
+
                 Transaction transaction = transactionRepository.findByTxId("FAT-" + form.getId() + "-" + form.getAccount().getId() + "-" + form.getFormTemplate().getId());
                 transactionRepository.delete(transaction);
                 Wallet wallet = walletRepository.findById(form.getAccount().getWallet().getId()).get();
-                wallet.setBalance((Long.valueOf(wallet.getBalance()) + form.getValue()) + "");
-                walletRepository.save(wallet);
+                if(form.isReal())
+                {
+                    wallet.setBalance((Long.valueOf(wallet.getBalance()) + form.getValue()) + "");
+                    walletRepository.save(wallet);
+                }
                 formRepository.delete(form);
                 resultData.setSuccess(true);
                 resultData.setMessage("Form is deleted !");
@@ -199,7 +172,7 @@ public class FormServiceImpl implements FormService
     }
 
     @Override
-    public ResultData createForm(Long formTemplateId, Long userId, List<ResultData> matchesData)
+    public ResultData createForm(Long formTemplateId, Long userId, boolean realForm, List<ResultData> matchesData)
     {
         ResultData resultData = new ResultData(false, "");
 
@@ -237,12 +210,18 @@ public class FormServiceImpl implements FormService
             }
 
             Account account = userService.findById(userId).getAccount();
-
-            //Checking account balance
-            if (value > Long.valueOf(account.getWallet().getBalance()))
+            if (realForm)
             {
-                resultData.setMessage("Account balance is not enough !");
-                return resultData;
+                //Checking account balance
+                if (value > Long.valueOf(account.getWallet().getBalance()))
+                {
+                    resultData.setMessage("Account balance is not enough !");
+                    return resultData;
+                }
+
+                //Update User Account Wallet
+                account.getWallet().setBalance((Long.valueOf(account.getWallet().getBalance()) - value) + "");
+                walletRepository.save(account.getWallet());
             }
 
             long formCounts = formRepository.countByAccount(account) + 1;
@@ -253,26 +232,30 @@ public class FormServiceImpl implements FormService
             else if (formTemplate.getType() == FormTemplateType.SILVER)
                 name = "SLV-" + formTemplateRepository.countByType(formTemplate.getType()) + "-" + formCounts;
 
-            Form form = new Form(name, LocalDate.now(ZoneId.of("Asia/Tehran")), LocalTime.now(ZoneId.of("Asia/Tehran")), FormStatus.REGISTERED, formTemplate);
+            Form form = new Form();
+            form.setName(name);
+            form.setCreatedDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
+            form.setCreatedTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
+            form.setStatus(FormStatus.REGISTERED);
+            form.setFormTemplate(formTemplate);
             form.setValue(value);
+            form.setReal(realForm);
             form.setAccount(account);
             form = formRepository.save(form);
 
             //Create transaction
             Transaction transaction = new Transaction();
-            transaction.setCreatedDate(new Date());
-            transaction.setUpdateDate(new Date());
+            transaction.setCreatedDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
+            transaction.setCreatedTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
+            transaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
+            transaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
             transaction.setStatus(TransactionStatus.CONFIRMED);
             transaction.setType(TransactionType.COST);
             transaction.setAccount(account);
             transaction.setTotalValue(value);
             transaction.setTxId("FAT-" + form.getId() + "-" + account.getId() + "-" + formTemplate.getId());
-            transaction.setDescription(formTemplate.getName() + "-" + formCounts);
+            transaction.setDescription(formTemplate.getName() + "-" + formCounts + (realForm ? "" : "-مجازی"));
             transactionRepository.save(transaction);
-
-            //Update User Account Wallet
-            account.getWallet().setBalance((Long.valueOf(account.getWallet().getBalance()) - value) + "");
-            walletRepository.save(account.getWallet());
 
 
             for (Object matchData : matchesData)
@@ -297,7 +280,7 @@ public class FormServiceImpl implements FormService
     }
 
     @Override
-    public ResultData updateForm(Long formId, Long userId, List<ResultData> matchesData)
+    public ResultData updateForm(Long formId, Long userId, boolean realForm, List<ResultData> matchesData)
     {
         ResultData resultData = new ResultData(false, "");
 
@@ -334,30 +317,43 @@ public class FormServiceImpl implements FormService
                     value = value * 2;
             }
 
+
             Form form = formRepository.findById(formId).get();
-
             Account account = userService.findById(userId).getAccount();
-            account.getWallet().setBalance((Long.valueOf(account.getWallet().getBalance()) + form.getValue()) + "");
 
-            //Checking account balance
-            if (value > Long.valueOf(account.getWallet().getBalance()))
+            if(realForm)
             {
-                resultData.setMessage("Account balance is not enough !");
-                return resultData;
+                //Checking account balance
+                if (value > Long.valueOf(account.getWallet().getBalance()))
+                {
+                    resultData.setMessage("Account balance is not enough !");
+                    return resultData;
+                }
+
+                //Update User Account Wallet
+//                account.getWallet().setBalance((Long.valueOf(account.getWallet().getBalance()) + form.getValue()) + "");
+
+                account.getWallet().setBalance((Long.valueOf(account.getWallet().getBalance()) - value) + "");
+                walletRepository.save(account.getWallet());
             }
 
             form.setValue(value);
+            form.setReal(realForm);
             formRepository.save(form);
 
             //Update transaction
             Transaction transaction = transactionRepository.findByTxId("FAT-" + form.getId() + "-" + form.getAccount().getId() + "-" + form.getFormTemplate().getId());
-            transaction.setUpdateDate(new Date());
+            transaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
+            transaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
             transaction.setTotalValue(value);
+            int descSize = transaction.getDescription().split("-").length;
+            if(descSize == 2 && !realForm)
+                transaction.setDescription(transaction.getDescription() + "-مجازی");
+            else if(descSize == 3 && realForm)
+                transaction.setDescription(transaction.getDescription().split("-")[0] + "-"+ transaction.getDescription().split("-")[1]);
             transactionRepository.save(transaction);
 
-            //Update User Account Wallet
-            account.getWallet().setBalance((Long.valueOf(account.getWallet().getBalance()) - value) + "");
-            walletRepository.save(account.getWallet());
+
 
             List<Match> matches = matchRepository.findByForm(form);
             for (Object matchData : matchesData)
@@ -504,6 +500,7 @@ public class FormServiceImpl implements FormService
             formMap.put("createdDate", Utills.nameDisplayForDate(form.getCreatedDate(), false));
             formMap.put("createdTime", Utills.shortDisplayForTime(form.getCreatedTime().toString()));
             formMap.put("status", form.getStatus());
+            formMap.put("real", form.isReal());
             formMap.put("templateId", form.getFormTemplate().getId());
             formMap.put("templateName", form.getFormTemplate().getName());
             forms.add(formMap);

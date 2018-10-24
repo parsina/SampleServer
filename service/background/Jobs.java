@@ -106,10 +106,9 @@ public class Jobs extends TimerTask
         fixtureStatuses.add(FixtureStatus.FT);
         fixtureStatuses.add(FixtureStatus.CANCEL);
 
-        for (Fixture fixture : fixtureRepository.findByUsedAndLocalDateEqualsAndStatusIsNotInAndFormTemplateStatusIsInOrderByDateAscTimeAsc(true, LocalDate.now(), fixtureStatuses, formTemplateStatuses))
+        for (Fixture fixture : fixtureRepository.findByUsedAndLocalDateLessThanAndStatusIsNotInAndFormTemplateStatusIsInOrderByDateAscTimeAsc(true, LocalDate.now().plusDays(1), fixtureStatuses, formTemplateStatuses))
         {
-            if (!fixture.getStatus().equals(FixtureStatus.FT) && !fixture.getStatus().equals(FixtureStatus.CANCEL))
-                liveScoreService.updateFixtureData(fixture.getId().toString());
+            liveScoreService.updateFixtureData(fixture.getId().toString());
             if (time.getHour() >= LocalTime.parse(fixture.getTime()).minusHours(1).getHour() && time.getMinute() >= LocalTime.parse(fixture.getTime()).minusHours(1).getMinute())
             {
                 FormTemplate formTemplate = formTemplateRepository.findById(fixture.getFormTemplate().getId()).get();
@@ -125,9 +124,11 @@ public class Jobs extends TimerTask
                 {
                     try
                     {
-                        createPhotoCalPDF(formTemplate.getId());
-                        formTemplate.setStatus(FormTemplateStatus.CLOSE);
-                        formTemplateRepository.save(formTemplate);
+                        if(createPhotoCalPDF(formTemplate.getId()))
+                        {
+                            formTemplate.setStatus(FormTemplateStatus.CLOSE);
+                            formTemplateRepository.save(formTemplate);
+                        }
                     } catch (IOException e)
                     {
                         e.printStackTrace();
@@ -282,268 +283,275 @@ public class Jobs extends TimerTask
         }
     }
 
-    private void createPhotoCalPDF(Long formTemplateId) throws IOException, DocumentException
+    private boolean createPhotoCalPDF(Long formTemplateId) throws IOException, DocumentException
     {
         FormTemplate formTemplate = formTemplateRepository.findById(formTemplateId).get();
-        String fileName = "PhotoCal_" + formTemplate.getType().name() + "_" + formTemplate.getId() + ".pdf";
-        String destination = "D://coin/photoCal/" + fileName;
-        String fontPath = "C://Users/javad.farzaneh/projects/Examples/coinServer/src/main/resources/font/Vazir.ttf";
-        Font font = FontFactory.getFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-        font.setSize(10);
-        Font blueFont = FontFactory.getFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-        blueFont.setColor(BaseColor.BLUE);
-        blueFont.setSize(8);
 
-        List<Form> forms = formRepository.findByFormTemplateOrderByCreatedDateAscCreatedTimeAsc(formTemplate);
-        /////////////////////////////////////////////////////////////////////////////////
-        Document document = new Document();
-        PdfWriter.getInstance(document, new FileOutputStream(destination));
-        document.open();
+        List<Form> forms = formRepository.findByFormTemplateAndRealOrderByCreatedDateAscCreatedTimeAsc(formTemplate, true);
 
-
-        int formCount = 0;
-        for (Form form : forms)
+        if (forms.size() > 0)
         {
-            formCount++;
+            String fileName = "PhotoCal_" + formTemplate.getType().name() + "_" + formTemplate.getId() + ".pdf";
+            String destination = "D://coin/photoCal/" + fileName;
+            String fontPath = "C://Users/javad.farzaneh/projects/Examples/coinServer/src/main/resources/font/Vazir.ttf";
+            Font font = FontFactory.getFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            font.setSize(10);
+            Font blueFont = FontFactory.getFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+            blueFont.setColor(BaseColor.BLUE);
+            blueFont.setSize(8);
 
-            // Header Data
-            //////////////////////////////////////////////////////////////////////////////////////////////////////
-            PdfPTable table = new PdfPTable(4);
-            table.setWidthPercentage(100);
-            table.setSpacingAfter(10);
-            table.setSpacingBefore(100);
-            table.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
+            /////////////////////////////////////////////////////////////////////////////////
+            Document document = new Document();
+            PdfWriter.getInstance(document, new FileOutputStream(destination));
+            document.open();
 
-            Phrase phrase = new Phrase("");
-            Chunk chunk1 = new Chunk("کاربر: ", font);
-            Chunk chunk2 = new Chunk(form.getAccount().getUser().getUsername(), blueFont);
-            phrase.add(chunk1);
-            phrase.add(chunk2);
-            PdfPCell cell = new PdfPCell(phrase);
-            cell.setBorder(0);
-            table.addCell(cell);
 
-            phrase = new Phrase("");
-            chunk1 = new Chunk("فرم: ", font);
-            chunk2 = new Chunk(form.getName(), blueFont);
-            phrase.add(chunk1);
-            phrase.add(chunk2);
-            cell = new PdfPCell(phrase);
-            cell.setBorder(0);
-            table.addCell(cell);
-
-            phrase = new Phrase("");
-            chunk1 = new Chunk("تاریخ ثبت: ", font);
-            chunk2 = new Chunk(Utills.nameDisplayForDate(form.getCreatedDate(), false) + " (" + Utills.shortDisplayForTime(form.getCreatedTime().toString()) + ")", blueFont);
-            phrase.add(chunk1);
-            phrase.add(chunk2);
-            cell = new PdfPCell(phrase);
-            cell.setBorder(0);
-            table.addCell(cell);
-
-            phrase = new Phrase("");
-            chunk1 = new Chunk("مبلغ: ", font);
-            chunk2 = new Chunk(Utills.commaSeparator(String.valueOf(form.getValue())) + " ساتوشی", blueFont);
-            phrase.add(chunk1);
-            phrase.add(chunk2);
-            cell = new PdfPCell(phrase);
-            cell.setBorder(0);
-            table.addCell(cell);
-
-            document.add(table);
-
-            LineSeparator separator = new LineSeparator();
-            separator.setLineColor(WebColors.getRGBColor("#e5e6e9"));
-            Chunk linebreak = new Chunk(separator);
-            document.add(linebreak);
-
-            //Form Data
-            //////////////////////////////////////////////////////////////////////////////////////////////////////
-            PdfPTable formTable = new PdfPTable(new float[]{25, 7, 7, 7, 25, 20, 5});
-            formTable.setWidthPercentage(100);
-            formTable.setSpacingBefore(10);
-            formTable.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
-
-            phrase = new Phrase("");
-            chunk1 = new Chunk("ردیف", font);
-            phrase.add(chunk1);
-            cell = new PdfPCell(phrase);
-            cell.setBackgroundColor(WebColors.getRGBColor("#d9effc"));
-            cell.setFixedHeight(20);
-            cell.setHorizontalAlignment(1);
-            cell.disableBorderSide(4);
-            formTable.addCell(cell);
-
-            phrase = new Phrase("");
-            chunk1 = new Chunk("زمان بازی", font);
-            phrase.add(chunk1);
-            cell = new PdfPCell(phrase);
-            cell.setBackgroundColor(WebColors.getRGBColor("#d9effc"));
-            cell.setHorizontalAlignment(1);
-            cell.setVerticalAlignment(1);
-            cell.disableBorderSide(12);
-            formTable.addCell(cell);
-
-            phrase = new Phrase("");
-            chunk1 = new Chunk("تیم میزبان", font);
-            phrase.add(chunk1);
-            cell = new PdfPCell(phrase);
-            cell.setBackgroundColor(WebColors.getRGBColor("#d9effc"));
-            cell.setHorizontalAlignment(1);
-            cell.setVerticalAlignment(1);
-            cell.disableBorderSide(12);
-            formTable.addCell(cell);
-
-            phrase = new Phrase("");
-            chunk1 = new Chunk("میزبان", font);
-            phrase.add(chunk1);
-            cell = new PdfPCell(phrase);
-            cell.setBackgroundColor(WebColors.getRGBColor("#d9effc"));
-            cell.setHorizontalAlignment(1);
-            cell.setVerticalAlignment(1);
-            cell.disableBorderSide(12);
-            formTable.addCell(cell);
-
-            phrase = new Phrase("");
-            chunk1 = new Chunk("مساوی", font);
-            phrase.add(chunk1);
-            cell = new PdfPCell(phrase);
-            cell.setBackgroundColor(WebColors.getRGBColor("#d9effc"));
-            cell.setHorizontalAlignment(1);
-            cell.setVerticalAlignment(1);
-            cell.disableBorderSide(12);
-            formTable.addCell(cell);
-
-            phrase = new Phrase("");
-            chunk1 = new Chunk("میهمان", font);
-            phrase.add(chunk1);
-            cell = new PdfPCell(phrase);
-            cell.setBackgroundColor(WebColors.getRGBColor("#d9effc"));
-            cell.disableBorderSide(12);
-            formTable.addCell(cell);
-
-            phrase = new Phrase("");
-            chunk1 = new Chunk("تیم میهمان", font);
-            phrase.add(chunk1);
-            cell = new PdfPCell(phrase);
-            cell.setBackgroundColor(WebColors.getRGBColor("#d9effc"));
-            cell.setHorizontalAlignment(1);
-            cell.setVerticalAlignment(1);
-            cell.disableBorderSide(8);
-            formTable.addCell(cell);
-
-            document.add(formTable);
-
-            //Match Data
-            //////////////////////////////////////////////////////////////////////////////////////////////////////
-
-            PdfPTable matchTable = new PdfPTable(new float[]{25, 7, 7, 7, 25, 20, 5});
-            matchTable.setWidthPercentage(100);
-            matchTable.setSpacingBefore(1);
-            matchTable.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
-
-            int count = 0;
-            for (Match match : matchRepository.findByForm(form))
+            int formCount = 0;
+            for (Form form : forms)
             {
-                Fixture fixture = fixtureRepository.findById(match.getFixtureId()).get();
+                formCount++;
 
-                count++;
+                // Header Data
+                //////////////////////////////////////////////////////////////////////////////////////////////////////
+                PdfPTable table = new PdfPTable(4);
+                table.setWidthPercentage(100);
+                table.setSpacingAfter(10);
+                table.setSpacingBefore(50);
+                table.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
 
-                // Counter
+                Phrase phrase = new Phrase("");
+                Chunk chunk1 = new Chunk("کاربر: ", font);
+                Chunk chunk2 = new Chunk(form.getAccount().getUser().getUsername(), blueFont);
+                phrase.add(chunk1);
+                phrase.add(chunk2);
+                PdfPCell cell = new PdfPCell(phrase);
+                cell.setBorder(0);
+                table.addCell(cell);
+
                 phrase = new Phrase("");
-                chunk1 = new Chunk(String.valueOf(count), font);
+                chunk1 = new Chunk("فرم: ", font);
+                chunk2 = new Chunk(form.getName(), blueFont);
+                phrase.add(chunk1);
+                phrase.add(chunk2);
+                cell = new PdfPCell(phrase);
+                cell.setBorder(0);
+                table.addCell(cell);
+
+                phrase = new Phrase("");
+                chunk1 = new Chunk("تاریخ ثبت: ", font);
+                chunk2 = new Chunk(Utills.nameDisplayForDate(form.getCreatedDate(), false) + " (" + Utills.shortDisplayForTime(form.getCreatedTime().toString()) + ")", blueFont);
+                phrase.add(chunk1);
+                phrase.add(chunk2);
+                cell = new PdfPCell(phrase);
+                cell.setBorder(0);
+                table.addCell(cell);
+
+                phrase = new Phrase("");
+                chunk1 = new Chunk("مبلغ: ", font);
+                chunk2 = new Chunk(Utills.commaSeparator(String.valueOf(form.getValue())) + " ساتوشی", blueFont);
+                phrase.add(chunk1);
+                phrase.add(chunk2);
+                cell = new PdfPCell(phrase);
+                cell.setBorder(0);
+                table.addCell(cell);
+
+                document.add(table);
+
+                LineSeparator separator = new LineSeparator();
+                separator.setLineColor(WebColors.getRGBColor("#e5e6e9"));
+                Chunk linebreak = new Chunk(separator);
+                document.add(linebreak);
+
+                //Form Data
+                //////////////////////////////////////////////////////////////////////////////////////////////////////
+                PdfPTable formTable = new PdfPTable(new float[]{25, 7, 7, 7, 25, 20, 5});
+                formTable.setWidthPercentage(100);
+                formTable.setSpacingBefore(10);
+                formTable.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
+
+                phrase = new Phrase("");
+                chunk1 = new Chunk("ردیف", font);
                 phrase.add(chunk1);
                 cell = new PdfPCell(phrase);
-                cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);
+                cell.setBackgroundColor(WebColors.getRGBColor("#d9effc"));
                 cell.setFixedHeight(20);
                 cell.setHorizontalAlignment(1);
                 cell.disableBorderSide(4);
-                cell.setBorderWidthTop(0);
-                matchTable.addCell(cell);
+                formTable.addCell(cell);
 
-                // Date and Time
                 phrase = new Phrase("");
-                chunk1 = new Chunk(Utills.nameDisplayForDate(fixture.getLocalDate(), false) + " " + Utills.shortDisplayForTime(fixture.getTime()), font);
+                chunk1 = new Chunk("زمان بازی", font);
                 phrase.add(chunk1);
                 cell = new PdfPCell(phrase);
-                cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);
+                cell.setBackgroundColor(WebColors.getRGBColor("#d9effc"));
                 cell.setHorizontalAlignment(1);
                 cell.setVerticalAlignment(1);
                 cell.disableBorderSide(12);
-                cell.setBorderWidthTop(0);
-                matchTable.addCell(cell);
+                formTable.addCell(cell);
 
-                // Local Team
                 phrase = new Phrase("");
-                chunk1 = new Chunk(fixture.getLocalTeamName(), font);
+                chunk1 = new Chunk("تیم میزبان", font);
                 phrase.add(chunk1);
                 cell = new PdfPCell(phrase);
-                cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);
+                cell.setBackgroundColor(WebColors.getRGBColor("#d9effc"));
                 cell.setHorizontalAlignment(1);
                 cell.setVerticalAlignment(1);
                 cell.disableBorderSide(12);
-                cell.setBorderWidthTop(0);
-                matchTable.addCell(cell);
+                formTable.addCell(cell);
 
-
-                Image checked_1 = Image.getInstance("C:\\Users\\javad.farzaneh\\projects\\Examples\\coinServer\\src\\main\\resources\\image\\checked_1.png");
-                Image unchecked_1 = Image.getInstance("C:\\Users\\javad.farzaneh\\projects\\Examples\\coinServer\\src\\main\\resources\\image\\unchecked_1.png");
-
-                Image checked_2 = Image.getInstance("C:\\Users\\javad.farzaneh\\projects\\Examples\\coinServer\\src\\main\\resources\\image\\checked_2.png");
-                Image unchecked_2 = Image.getInstance("C:\\Users\\javad.farzaneh\\projects\\Examples\\coinServer\\src\\main\\resources\\image\\unchecked_2.png");
-
-                // Local Win
-                cell = new PdfPCell(match.isLocalWin() ? (count % 2 == 1 ? checked_1 : checked_2) : (count % 2 == 1 ? unchecked_1 : unchecked_2), true);
-                cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);
-                cell.setHorizontalAlignment(1);
-                cell.setVerticalAlignment(1);
-                cell.disableBorderSide(12);
-                cell.setFixedHeight(12);
-                cell.setPadding(2);
-                cell.setBorderWidthTop(0);
-                matchTable.addCell(cell);
-
-                // No Win
-                cell = new PdfPCell(match.isNoWin() ? (count % 2 == 1 ? checked_1 : checked_2) : (count % 2 == 1 ? unchecked_1 : unchecked_2), true);
-                cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);
-                cell.setHorizontalAlignment(1);
-                cell.setVerticalAlignment(1);
-                cell.disableBorderSide(12);
-                cell.setFixedHeight(12);
-                cell.setPadding(2);
-                cell.setBorderWidthTop(0);
-                matchTable.addCell(cell);
-
-                // Visitor Win
-                cell = new PdfPCell(match.isVisitorWin() ? (count % 2 == 1 ? checked_1 : checked_2) : (count % 2 == 1 ? unchecked_1 : unchecked_2), true);
-                cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);
-                cell.setHorizontalAlignment(1);
-                cell.setVerticalAlignment(1);
-                cell.disableBorderSide(12);
-                cell.setFixedHeight(12);
-                cell.setPadding(2);
-                cell.setBorderWidthTop(0);
-                matchTable.addCell(cell);
-
-                // Visitoe Team
                 phrase = new Phrase("");
-                chunk1 = new Chunk(fixture.getVisitorTeamName(), font);
+                chunk1 = new Chunk("میزبان", font);
                 phrase.add(chunk1);
                 cell = new PdfPCell(phrase);
-                cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);
+                cell.setBackgroundColor(WebColors.getRGBColor("#d9effc"));
+                cell.setHorizontalAlignment(1);
+                cell.setVerticalAlignment(1);
+                cell.disableBorderSide(12);
+                formTable.addCell(cell);
+
+                phrase = new Phrase("");
+                chunk1 = new Chunk("مساوی", font);
+                phrase.add(chunk1);
+                cell = new PdfPCell(phrase);
+                cell.setBackgroundColor(WebColors.getRGBColor("#d9effc"));
+                cell.setHorizontalAlignment(1);
+                cell.setVerticalAlignment(1);
+                cell.disableBorderSide(12);
+                formTable.addCell(cell);
+
+                phrase = new Phrase("");
+                chunk1 = new Chunk("میهمان", font);
+                phrase.add(chunk1);
+                cell = new PdfPCell(phrase);
+                cell.setBackgroundColor(WebColors.getRGBColor("#d9effc"));
+                cell.disableBorderSide(12);
+                formTable.addCell(cell);
+
+                phrase = new Phrase("");
+                chunk1 = new Chunk("تیم میهمان", font);
+                phrase.add(chunk1);
+                cell = new PdfPCell(phrase);
+                cell.setBackgroundColor(WebColors.getRGBColor("#d9effc"));
                 cell.setHorizontalAlignment(1);
                 cell.setVerticalAlignment(1);
                 cell.disableBorderSide(8);
-                cell.setBorderWidthTop(0);
-                matchTable.addCell(cell);
+                formTable.addCell(cell);
+
+                document.add(formTable);
+
+                //Match Data
+                //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+                PdfPTable matchTable = new PdfPTable(new float[]{25, 7, 7, 7, 25, 20, 5});
+                matchTable.setWidthPercentage(100);
+                matchTable.setSpacingBefore(1);
+                matchTable.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
+
+                int count = 0;
+                for (Match match : matchRepository.findByForm(form))
+                {
+                    Fixture fixture = fixtureRepository.findById(match.getFixtureId()).get();
+
+                    count++;
+
+                    // Counter
+                    phrase = new Phrase("");
+                    chunk1 = new Chunk(String.valueOf(count), font);
+                    phrase.add(chunk1);
+                    cell = new PdfPCell(phrase);
+                    cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);
+                    cell.setFixedHeight(20);
+                    cell.setHorizontalAlignment(1);
+                    cell.disableBorderSide(4);
+                    cell.setBorderWidthTop(0);
+                    matchTable.addCell(cell);
+
+                    // Date and Time
+                    phrase = new Phrase("");
+                    chunk1 = new Chunk(Utills.nameDisplayForDate(fixture.getLocalDate(), false) + " " + Utills.shortDisplayForTime(fixture.getTime()), font);
+                    phrase.add(chunk1);
+                    cell = new PdfPCell(phrase);
+                    cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);
+                    cell.setHorizontalAlignment(1);
+                    cell.setVerticalAlignment(1);
+                    cell.disableBorderSide(12);
+                    cell.setBorderWidthTop(0);
+                    matchTable.addCell(cell);
+
+                    // Local Team
+                    phrase = new Phrase("");
+                    chunk1 = new Chunk(fixture.getLocalTeamName(), font);
+                    phrase.add(chunk1);
+                    cell = new PdfPCell(phrase);
+                    cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);
+                    cell.setHorizontalAlignment(1);
+                    cell.setVerticalAlignment(1);
+                    cell.disableBorderSide(12);
+                    cell.setBorderWidthTop(0);
+                    matchTable.addCell(cell);
+
+
+                    Image checked_1 = Image.getInstance("C:\\Users\\javad.farzaneh\\projects\\Examples\\coinServer\\src\\main\\resources\\image\\checked_1.png");
+                    Image unchecked_1 = Image.getInstance("C:\\Users\\javad.farzaneh\\projects\\Examples\\coinServer\\src\\main\\resources\\image\\unchecked_1.png");
+
+                    Image checked_2 = Image.getInstance("C:\\Users\\javad.farzaneh\\projects\\Examples\\coinServer\\src\\main\\resources\\image\\checked_2.png");
+                    Image unchecked_2 = Image.getInstance("C:\\Users\\javad.farzaneh\\projects\\Examples\\coinServer\\src\\main\\resources\\image\\unchecked_2.png");
+
+                    // Local Win
+                    cell = new PdfPCell(match.isLocalWin() ? (count % 2 == 1 ? checked_1 : checked_2) : (count % 2 == 1 ? unchecked_1 : unchecked_2), true);
+                    cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);
+                    cell.setHorizontalAlignment(1);
+                    cell.setVerticalAlignment(1);
+                    cell.disableBorderSide(12);
+                    cell.setFixedHeight(12);
+                    cell.setPadding(2);
+                    cell.setBorderWidthTop(0);
+                    matchTable.addCell(cell);
+
+                    // No Win
+                    cell = new PdfPCell(match.isNoWin() ? (count % 2 == 1 ? checked_1 : checked_2) : (count % 2 == 1 ? unchecked_1 : unchecked_2), true);
+                    cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);
+                    cell.setHorizontalAlignment(1);
+                    cell.setVerticalAlignment(1);
+                    cell.disableBorderSide(12);
+                    cell.setFixedHeight(12);
+                    cell.setPadding(2);
+                    cell.setBorderWidthTop(0);
+                    matchTable.addCell(cell);
+
+                    // Visitor Win
+                    cell = new PdfPCell(match.isVisitorWin() ? (count % 2 == 1 ? checked_1 : checked_2) : (count % 2 == 1 ? unchecked_1 : unchecked_2), true);
+                    cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);
+                    cell.setHorizontalAlignment(1);
+                    cell.setVerticalAlignment(1);
+                    cell.disableBorderSide(12);
+                    cell.setFixedHeight(12);
+                    cell.setPadding(2);
+                    cell.setBorderWidthTop(0);
+                    matchTable.addCell(cell);
+
+                    // Visitoe Team
+                    phrase = new Phrase("");
+                    chunk1 = new Chunk(fixture.getVisitorTeamName(), font);
+                    phrase.add(chunk1);
+                    cell = new PdfPCell(phrase);
+                    cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);
+                    cell.setHorizontalAlignment(1);
+                    cell.setVerticalAlignment(1);
+                    cell.disableBorderSide(8);
+                    cell.setBorderWidthTop(0);
+                    matchTable.addCell(cell);
+                }
+
+                document.add(matchTable);
+
+                if (formCount % 2 == 0)
+                    document.newPage();
             }
 
-            document.add(matchTable);
-
-            if (formCount % 2 == 0)
-                document.newPage();
+            document.close();
         }
 
-        document.close();
+        return true;
     }
 }

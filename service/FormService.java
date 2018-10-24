@@ -24,9 +24,9 @@ public interface FormService
 
     ResultData  deleteUserForm(Long formId);
 
-    ResultData  createForm(Long formTemplateId, Long userId, List<ResultData> matchesData);
+    ResultData  createForm(Long formTemplateId, Long userId, boolean realForm, List<ResultData> matchesData);
 
-    ResultData  updateForm(Long formId, Long userId, List<ResultData> matchesData);
+    ResultData  updateForm(Long formId, Long userId, boolean realForm, List<ResultData> matchesData);
 
     List<ResultData> findFormTemplatesByStatus(List<FormTemplateStatus> statuses);
 

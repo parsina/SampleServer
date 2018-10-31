@@ -1,5 +1,6 @@
 package com.coin.app.service.mail;
 
+import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.User;
 import com.coin.app.service.AccountService;
 import com.coin.app.service.UserService;
@@ -29,7 +30,7 @@ public class EmailServiceImpl implements EmailService
     @Async
     public void sendActivationLink(String email)
     {
-        User user = userService.findByUsername(email);
+        User user = userService.findByEmail(email);
         while(user.getAccount() == null)
             user.setAccount(accountService.createAccount(user));
         userService.saveUser(user);
@@ -51,8 +52,40 @@ public class EmailServiceImpl implements EmailService
         } catch (MailException e)
         {
             // runtime exception; compiler will not force you to handle it
+            System.out.println(">>>>> Email sending problem!");
         }
 
         System.out.println(">>>>> Invitation email send to : " + user.getEmail());
+    }
+
+    @Override
+    public ResultData sendWithdrawalCode(String userId)
+    {
+        String message = "لطفا کد امنیتی زیر را در محل مربوطه وارد نمایید: " ;
+        String code = "1234" ;
+
+        ResultData resultData = new ResultData(true, "");
+        if(userService.getCurrentUser().getId().equals(Long.valueOf(userId)))
+        {
+            MimeMessagePreparator messagePreparator = mimeMessage ->
+            {
+                MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
+                messageHelper.setTo(userService.getCurrentUser().getEmail());
+                messageHelper.setSubject("کد امنیتی");
+                String content = mailContentBuilderService.build(message, code, "securityCode");
+                messageHelper.setText(content, true);
+            };
+            try
+            {
+                sender.send(messagePreparator);
+                resultData.addProperty("securityCode", code);
+                return resultData;
+            } catch (MailException e)
+            {
+                // runtime exception; compiler will not force you to handle it
+                return new ResultData(false, "Email sending problem!");
+            }
+        }
+        else return new ResultData(false, "Authentication problem!");
     }
 }

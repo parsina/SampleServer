@@ -22,7 +22,9 @@ public interface UserService
 
     void save(User user);
 
-    User findByUsername(String username);
+    User findByEmail(String email);
+
+    User findByUserName(String username);
 
     List<User> findAllUsers();
 

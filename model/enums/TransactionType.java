@@ -2,5 +2,5 @@ package com.coin.app.model.enums;
 
 public enum TransactionType
 {
-    DEPOSIT, COST, INCOME, WITHDRAWAL
+    DEPOSIT, COST, INCOME, GIFT, WITHDRAWAL, FORWARD
 }

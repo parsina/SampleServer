@@ -11,4 +11,6 @@ public interface TransactionService
     Long countUserAccountTransactions();
 
     ResultData getUserAccountTransactions(String filter, String sortOrder, String sortBy, int pageNumber,int pageSize);
+
+    ResultData transfer(String userId, String address, String amount, String securityCode, String userSecurityCode);
 }

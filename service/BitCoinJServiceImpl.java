@@ -1,13 +1,12 @@
 package com.coin.app.service;
 
 import java.io.File;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.Date;
 import java.util.List;
 
-import com.coin.app.model.Account;
 import com.coin.app.model.User;
 import com.coin.app.model.enums.TransactionStatus;
 import com.coin.app.model.enums.TransactionType;
@@ -16,19 +15,26 @@ import com.coin.app.repository.AccountRepository;
 import com.coin.app.repository.TransactionRepository;
 import com.coin.app.repository.UserRepository;
 import com.coin.app.repository.WalletRepository;
+import com.coin.app.util.Utills;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.crypto.KeyCrypterException;
+import org.bitcoinj.crypto.KeyCrypterScrypt;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.BriefLogFormatter;
+import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
+import org.spongycastle.crypto.params.KeyParameter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -72,14 +78,15 @@ public class BitCoinJServiceImpl implements BitcoinJService
     }
 
 
-    @Override
-    public void initializeWallet()
+    private void initializeWallet()
     {
         while (kit == null)
         {
             kit = new WalletAppKit(params, new File("C:\\Wallets\\"), "coinWallet"); //.replaceAll("[^a-zA-Z0-9.-]", "_") + "-" + params.getPaymentProtocolId();
             kit.startAsync();
             kit.awaitRunning();
+            if(!kit.wallet().isEncrypted())
+                kit.wallet().encrypt("Qwerty123");
             startCoinReceiveListener();
             System.out.println("////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////");
             System.out.println("////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////");
@@ -117,7 +124,7 @@ public class BitCoinJServiceImpl implements BitcoinJService
     @Override
     public void updateWalletJob()
     {
-        for (com.coin.app.model.Transaction transaction : transactionRepository.findByStatusAndType(TransactionStatus.UNCONFIRMED, TransactionType.DEPOSIT))
+        for (com.coin.app.model.Transaction transaction : transactionRepository.findByStatus(TransactionStatus.UNCONFIRMED))
         {
             for (Transaction tx : kit.wallet().getTransactionsByTime())
             {
@@ -125,9 +132,17 @@ public class BitCoinJServiceImpl implements BitcoinJService
                 {
                     transaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
                     transaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
-                    transaction.setDescription("Confirmed on job: " + tx.getConfidence().getBroadcastBy().size() + " confirmations");
+                    if (transaction.getType().equals(TransactionType.DEPOSIT))
+                        transaction.setDescription("در انتظار تایید واریز ...");
+                    else if (transaction.getType().equals(TransactionType.WITHDRAWAL))
+                        transaction.setDescription("در انتظار تایید برداشت ...");
                     if (!tx.isPending())
                     {
+                        if (transaction.getType().equals(TransactionType.DEPOSIT))
+                            transaction.setDescription("واریز " + Utills.commaSeparator(String.valueOf(Math.abs(transaction.getTotalValue()))) + " ساتوشی به حساب شما");
+                        else if (transaction.getType().equals(TransactionType.WITHDRAWAL))
+                            transaction.setDescription("برداشت " + Utills.commaSeparator(String.valueOf(Math.abs(transaction.getTotalValue()))) + " ساتوشی از حساب شما");
+
                         transaction.setStatus(TransactionStatus.CONFIRMED);
                         updateUserWallet(transaction);
                         updateAdminRealBalance();
@@ -141,7 +156,7 @@ public class BitCoinJServiceImpl implements BitcoinJService
         List<Transaction> transactions = kit.wallet().getTransactionsByTime();
         if (transactions.size() != count)
             for (Transaction tx : transactions)
-                depositOnUserWallet(kit.wallet(), tx);
+                saveUserTransaction(kit.wallet(), tx);
     }
 
     private void startCoinReceiveListener()
@@ -151,8 +166,10 @@ public class BitCoinJServiceImpl implements BitcoinJService
             @Override
             public void onCoinsReceived(Wallet w, Transaction tx, Coin prevBalance, Coin newBalance)
             {
+                if (tx.getPurpose().equals(Transaction.Purpose.USER_PAYMENT))
+                    return;
                 System.out.println("Received tx for " + tx.getValueSentToMe(w).toFriendlyString() + ": " + tx);
-                com.coin.app.model.Transaction transaction = depositOnUserWallet(w, tx);
+                com.coin.app.model.Transaction transaction = saveUserTransaction(w, tx);
 
                 // Wait until it's made it into the block chain (may run immediately if it's already there).
                 Futures.addCallback(tx.getConfidence().getDepthFuture(1), new FutureCallback<TransactionConfidence>()
@@ -160,15 +177,6 @@ public class BitCoinJServiceImpl implements BitcoinJService
                     @Override
                     public void onSuccess(TransactionConfidence result)
                     {
-                        if (transaction != null && transaction.getStatus().equals(TransactionStatus.UNCONFIRMED))
-                        {
-                            transaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
-                            transaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
-                            transaction.setDescription("Confirmed on success: " + tx.getConfidence().getBroadcastBy().size() + " confirmations");
-                            transaction.setStatus(TransactionStatus.CONFIRMED);
-                            transactionRepository.save(transaction);
-                            updateAdminRealBalance();
-                        }
                         System.out.println("Confirmation received.");
                     }
 
@@ -179,7 +187,7 @@ public class BitCoinJServiceImpl implements BitcoinJService
                         {
                             transaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
                             transaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
-                            transaction.setDescription("Deposit confirmation Failed. id: " + tx.getHashAsString() + "   value: " + tx.getValue(w));
+                            transaction.setDescription(" عدم تایید واریز " + Utills.commaSeparator(String.valueOf(Math.abs(transaction.getTotalValue()))) + " ساتوشی به حساب شما");
                             transaction.setStatus(TransactionStatus.FAILED);
                             transactionRepository.save(transaction);
                             System.out.println("Confirmation Failure.");
@@ -201,7 +209,7 @@ public class BitCoinJServiceImpl implements BitcoinJService
         }
     }
 
-    private com.coin.app.model.Transaction depositOnUserWallet(Wallet w, Transaction tx)
+    private com.coin.app.model.Transaction saveUserTransaction(Wallet w, Transaction tx)
     {
         if (transactionRepository.findByTxId(tx.getHashAsString()) != null)
             return transactionRepository.findByTxId(tx.getHashAsString());
@@ -227,10 +235,27 @@ public class BitCoinJServiceImpl implements BitcoinJService
         transaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
         transaction.setTxId(tx.getHashAsString());
         transaction.setFee(tx.getFee() == null ? null : tx.getFee().getValue() + "");
-        transaction.setTotalValue(tx.getValue(w).getValue());
+        long fee = tx.getFee() == null ? 0 : tx.getFee().getValue();
+        transaction.setTotalValue(Math.abs(tx.getValue(w).getValue()) - fee);
         transaction.setStatus(TransactionStatus.UNCONFIRMED);
-        transaction.setType(TransactionType.DEPOSIT);
-        transaction.setDescription("Confirmed on received: " + tx.getConfidence().getBroadcastBy().size() + " confirmations");
+        if( tx.getValue(w).getValue() > 0 )
+        {
+            transaction.setType(TransactionType.DEPOSIT);
+            transaction.setDescription("در انتظار تایید واریز ...");
+        }
+        else
+        {
+            for(TransactionOutput out : outputs)
+                if(Math.abs(tx.getValue(w).getValue()) - tx.getFee().getValue() == out.getValue().getValue())
+                {
+                    transaction.setType(TransactionType.FORWARD);
+                    transaction.setDescription("انتقال " + Utills.commaSeparator(String.valueOf(Math.abs(tx.getValue(w).getValue()) - fee)) +  " ساتوشی به آدرس "
+                            + out.getAddressFromP2PKHScript(params) + " و " + Math.round((Math.abs(tx.getValue(w).getValue()) - 1000)  * 0.005) + " ساتوشی کارمزد به حساب مدیریت");
+                    break;
+                }
+//
+        }
+
         transaction.setAccount(accountRepository.findByWallet(userWallet));
         return transactionRepository.save(transaction);
     }
@@ -238,55 +263,52 @@ public class BitCoinJServiceImpl implements BitcoinJService
     private void updateUserWallet(com.coin.app.model.Transaction transaction)
     {
         com.coin.app.model.Wallet wallet = transaction.getAccount().getWallet();
-        if(transaction.getType().equals(TransactionType.DEPOSIT))
+        if (transaction.getType().equals(TransactionType.DEPOSIT))
         {
             wallet.setBalance((Long.valueOf(wallet.getBalance()) + transaction.getTotalValue()) + "");
             walletRepository.save(wallet);
         }
     }
 
-    //For using to forward coins to user's external wallet address. Need to modify
-    public void forwardCoins(Account account, String address)
+    @Override
+    public TransactionStatus forwardCoins(Long amount, String address)
     {
         Address forwardingAddress = new Address(params, address);
-        Long realBalanceCoin = Coin.parseCoin(account.getWallet().getBalance()).value;
-//        try
-//        {
-//            SendRequest sendRquest = SendRequest.emptyWallet(forwardingAddress);
-//            sendRquest.feePerKb = Coin.ZERO;
-//            Wallet.SendResult sendResult = kit.wallet().sendCoins(kit.peerGroup(), sendRquest);
-//            System.out.println("Sending ...");
-//
-//            Long fee = sendResult.tx.getFee() == null ? 0L : sendResult.tx.getFee().value;
-//            Long value = sendResult.tx.getValueSentFromMe(kit.wallet()).value - fee;
-//
-//
-//            transactionService.createOrUpdateTransaction(sendResult.tx.getHashAsString(), Coin.valueOf(fee).toFriendlyString(),
-//                    value, Coin.valueOf(value).toFriendlyString(), account, TransactionStatus.UNCONFIRMED, TransactionType.FORWARD);
-//
-//            // Update real balance of the user's wallet
-//            account.getWallet().setRealBalance(Coin.valueOf(realBalanceCoin + value).toFriendlyString());
-//            walletService.update(account.getWallet());
-//
-//            // Register a callback that is invoked when the transaction has propagated across the network.
-//            // This shows a second style of registering ListenableFuture callbacks, it works when you don't
-//            // need access to the object the future returns.
-//            sendResult.broadcastComplete.addListener(new Runnable()
-//            {
-//                @Override
-//                public void run()
-//                {
-//                    // The wallet has changed now, it'll get auto saved shortly or when the app shuts down.
-//                    System.out.println("Sent coins onwards! Transaction hash is " + sendResult.tx.getHashAsString());
-//                    transactionService.createOrUpdateTransaction(sendResult.tx.getHashAsString(), Coin.valueOf(fee).toFriendlyString(),
-//                            value, Coin.valueOf(value).toFriendlyString(), account, TransactionStatus.CONFIRMED, TransactionType.FORWARD);
-//
-//                }
-//            }, MoreExecutors.directExecutor());
-//        } catch (KeyCrypterException | InsufficientMoneyException e)
-//        {
-//            // We don't use encrypted wallets in this example - can never happen.
-//            throw new RuntimeException(e);
-//        }
+        try
+        {
+            SendRequest sendRquest = SendRequest.to(forwardingAddress, Coin.valueOf(amount));
+            sendRquest.feePerKb = Coin.ZERO;
+            sendRquest.aesKey = kit.wallet().getKeyCrypter().deriveKey("Qwerty123");
+            Wallet.SendResult sendResult = kit.wallet().sendCoins(kit.peerGroup(), sendRquest);
+            System.out.println("Sending ...");
+
+            Long fee = sendResult.tx.getFee() == null ? 0L : sendResult.tx.getFee().value;
+            Long value = Math.abs(sendResult.tx.getValue(kit.wallet()).getValue()) - fee;
+
+            // Register a callback that is invoked when the transaction has propagated across the network.
+            // This shows a second style of registering ListenableFuture callbacks, it works when you don't
+            // need access to the object the future returns.
+            sendResult.broadcastComplete.addListener(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    //Remove fee from admin balance
+                    com.coin.app.model.Wallet adminWallet = userRepository.findByUsername("Admin").getAccount().getWallet();
+                    Long adminBalance = Long.valueOf(adminWallet.getBalance()) - fee;
+                    adminWallet.setBalance(adminBalance.toString());
+                    walletRepository.save(adminWallet);
+                    updateAdminRealBalance();
+                }
+            }, MoreExecutors.directExecutor());
+
+        } catch (KeyCrypterException | InsufficientMoneyException e)
+        {
+            // We don't use encrypted wallets in this example - can never happen.
+            System.out.println(e.getMessage());
+            return TransactionStatus.FAILED;
+        }
+
+        return TransactionStatus.CONFIRMED;
     }
 }

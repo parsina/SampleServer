@@ -17,7 +17,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>
 
     List<Transaction> findByAccount(Account account, Pageable pageable);
 
-    List<Transaction> findByStatusAndType(TransactionStatus status, TransactionType type);
+    List<Transaction> findByStatus(TransactionStatus status);
 
     int countByType(TransactionType type);
 }

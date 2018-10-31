@@ -9,11 +9,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TimerTask;
 
+import com.coin.app.model.Transaction;
+import com.coin.app.model.User;
+import com.coin.app.model.Wallet;
 import com.coin.app.model.Winner;
 import com.coin.app.model.enums.FixtureStatus;
 import com.coin.app.model.enums.FormStatus;
 import com.coin.app.model.enums.FormTemplateStatus;
 import com.coin.app.model.enums.FormTemplateType;
+import com.coin.app.model.enums.TransactionStatus;
+import com.coin.app.model.enums.TransactionType;
 import com.coin.app.model.enums.WinnerPlace;
 import com.coin.app.model.livescore.Fixture;
 import com.coin.app.model.livescore.Form;
@@ -23,6 +28,9 @@ import com.coin.app.repository.FixtureRepository;
 import com.coin.app.repository.FormRepository;
 import com.coin.app.repository.FormTemplateRepository;
 import com.coin.app.repository.MatchRepository;
+import com.coin.app.repository.TransactionRepository;
+import com.coin.app.repository.UserRepository;
+import com.coin.app.repository.WalletRepository;
 import com.coin.app.repository.WinnerRepository;
 import com.coin.app.service.BitcoinJService;
 import com.coin.app.service.LiveScoreService;
@@ -66,7 +74,16 @@ public class Jobs extends TimerTask
     private WinnerRepository winnerRepository;
 
     @Autowired
+    private WalletRepository walletRepository;
+
+    @Autowired
     private BitcoinJService bitcoinJService;
+
+    @Autowired
+    private TransactionRepository transactionRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     private LocalDate date = LocalDate.now(ZoneId.of("Asia/Tehran")).minusDays(0);
 
@@ -124,7 +141,7 @@ public class Jobs extends TimerTask
                 {
                     try
                     {
-                        if(createPhotoCalPDF(formTemplate.getId()))
+                        if (createPhotoCalPDF(formTemplate.getId()))
                         {
                             formTemplate.setStatus(FormTemplateStatus.CLOSE);
                             formTemplateRepository.save(formTemplate);
@@ -172,7 +189,7 @@ public class Jobs extends TimerTask
                     formScore += (match.isScore() ? 1 : 0);
                     matchRepository.save(match);
                 }
-                totalValue += form.getValue();
+                totalValue += form.isReal() ? form.getValue() : 0;
                 form.setScore(formScore);
                 formCount++;
                 if (allMatchesInFormAreDone)
@@ -213,7 +230,7 @@ public class Jobs extends TimerTask
         int place = 0;
         for (int score = 15; score > 0; score--)
         {
-            List<Form> forms = formRepository.findByFormTemplateAndScore(formTemplate, score);
+            List<Form> forms = formRepository.findByFormTemplateAndScoreAndReal(formTemplate, score, true);
             if (forms.size() > 0)
             {
                 place++;
@@ -225,9 +242,10 @@ public class Jobs extends TimerTask
                     {
                         Winner winner = new Winner();
                         winner.setForm(form);
-                        winner.setPrize(formTemplate.getTotalValue() / forms.size());
+                        Long prize = formTemplate.getTotalValue() / forms.size();
+                        winner.setPrize(prize);
                         winner.setWinnerPlace(WinnerPlace.First);
-                        winnerRepository.save(winner);
+                        winnerTransactionCalculation(winner, formTemplate);
                     }
                     return;
                 }
@@ -241,14 +259,16 @@ public class Jobs extends TimerTask
                         winner.setForm(form);
                         if (place == 1)
                         {
-                            winner.setPrize((75 * formTemplate.getTotalValue()) / (100 * forms.size()));
+                            Long prize = (75 * formTemplate.getTotalValue()) / (100 * forms.size());
+                            winner.setPrize(prize);
                             winner.setWinnerPlace(WinnerPlace.First);
                         } else if (place == 2)
                         {
-                            winner.setPrize((25 * formTemplate.getTotalValue()) / (100 * forms.size()));
+                            Long prize = (25 * formTemplate.getTotalValue()) / (100 * forms.size());
+                            winner.setPrize(prize);
                             winner.setWinnerPlace(WinnerPlace.Second);
                         }
-                        winnerRepository.save(winner);
+                        winnerTransactionCalculation(winner, formTemplate);
                     }
                     if (place == 2)
                         return;
@@ -263,24 +283,105 @@ public class Jobs extends TimerTask
                         winner.setForm(form);
                         if (place == 1)
                         {
-                            winner.setPrize((65 * formTemplate.getTotalValue()) / (100 * forms.size()));
+                            Long prize = (65 * formTemplate.getTotalValue()) / (100 * forms.size());
+                            winner.setPrize(prize);
                             winner.setWinnerPlace(WinnerPlace.First);
                         } else if (place == 2)
                         {
-                            winner.setPrize((20 * formTemplate.getTotalValue()) / (100 * forms.size()));
+                            Long prize = (20 * formTemplate.getTotalValue()) / (100 * forms.size());
+                            winner.setPrize(prize);
                             winner.setWinnerPlace(WinnerPlace.Second);
                         } else if (place == 3)
                         {
-                            winner.setPrize((15 * formTemplate.getTotalValue()) / (100 * forms.size()));
+                            Long prize = (15 * formTemplate.getTotalValue()) / (100 * forms.size());
+                            winner.setPrize(prize);
                             winner.setWinnerPlace(WinnerPlace.Third);
                         }
-                        winnerRepository.save(winner);
+
+                        winnerTransactionCalculation(winner, formTemplate);
                     }
                     if (place == 3)
                         return;
                 }
             }
         }
+        formTemplate.setStatus(FormTemplateStatus.FINISHED);
+    }
+
+    private void winnerTransactionCalculation(Winner winner, FormTemplate formTemplate)
+    {
+        //Winner transaction
+        Transaction transaction = new Transaction();
+        transaction.setCreatedDate(LocalDate.now());
+        transaction.setCreatedTime(LocalTime.now());
+        transaction.setDescription("جایزه " + winner.getForm().getFormTemplate().getName() + " (با کسر 25% کارمزد)");
+        transaction.setStatus(TransactionStatus.CONFIRMED);
+        Long fee = 25 * winner.getPrize() / 100;
+        Long userPrize = winner.getPrize() - fee;
+        transaction.setFee(fee.toString());
+        transaction.setTotalValue(userPrize);
+        transaction.setType(TransactionType.INCOME);
+        transaction.setAccount(winner.getForm().getAccount());
+        transaction.setUpdateDate(LocalDate.now());
+        transaction.setUpdateTime(LocalTime.now());
+        transactionRepository.save(transaction);
+
+        //Update winner wallet
+        Wallet wallet = winner.getForm().getAccount().getWallet();
+        Long balance = Long.valueOf(wallet.getBalance()) + userPrize;
+        wallet.setBalance(balance.toString());
+        walletRepository.save(wallet);
+        winnerRepository.save(winner);
+
+
+
+        //User parent transaction
+        transaction = new Transaction();
+        transaction.setCreatedDate(LocalDate.now());
+        transaction.setCreatedTime(LocalTime.now());
+        transaction.setDescription("پاداش " + winner.getForm().getFormTemplate().getName() + " به دلیل دعوت از برنده این مسابقه، با نام کاربری " + winner.getForm().getAccount().getUser().getUsername());
+        transaction.setStatus(TransactionStatus.CONFIRMED);
+        Long userGift = 5 * winner.getPrize() / 100;
+        transaction.setTotalValue(userGift);
+        transaction.setType(TransactionType.GIFT);
+        Long id = winner.getForm().getAccount().getUser().getParentId();
+        User user;
+        if (userRepository.findById(id).isPresent() && formRepository.countByAccountAndFormTemplateAndReal(userRepository.findById(id).get().getAccount(), formTemplate, true) > 0)
+            user = userRepository.findById(id).get();
+        else
+            user = userRepository.findByUsername("Admin");
+
+        transaction.setAccount(user.getAccount());
+        transaction.setUpdateDate(LocalDate.now());
+        transaction.setUpdateTime(LocalTime.now());
+        transactionRepository.save(transaction);
+
+        //Update User parent wallet
+        wallet = user.getAccount().getWallet();
+        balance = Long.valueOf(wallet.getBalance()) + userGift;
+        wallet.setBalance(balance.toString());
+        walletRepository.save(wallet);
+
+        //Admin transaction
+        transaction = new Transaction();
+        transaction.setCreatedDate(LocalDate.now());
+        transaction.setCreatedTime(LocalTime.now());
+        transaction.setDescription("کارمزد " + winner.getForm().getFormTemplate().getName() + " از طرف برنده مسابقه با نام کاربری " + winner.getForm().getAccount().getUser().getUsername());
+        transaction.setStatus(TransactionStatus.CONFIRMED);
+        Long userFee = 20 * winner.getPrize() / 100;
+        transaction.setTotalValue(userFee);
+        transaction.setType(TransactionType.INCOME);
+        user = userRepository.findByUsername("Admin");
+        transaction.setAccount(user.getAccount());
+        transaction.setUpdateDate(LocalDate.now());
+        transaction.setUpdateTime(LocalTime.now());
+        transactionRepository.save(transaction);
+
+        //Update Admin wallet
+        wallet = user.getAccount().getWallet();
+        balance = Long.valueOf(wallet.getBalance()) + userFee;
+        wallet.setBalance(balance.toString());
+        walletRepository.save(wallet);
     }
 
     private boolean createPhotoCalPDF(Long formTemplateId) throws IOException, DocumentException
@@ -480,7 +581,7 @@ public class Jobs extends TimerTask
 
                     // Local Team
                     phrase = new Phrase("");
-                    chunk1 = new Chunk(fixture.getLocalTeamName(), font);
+                    chunk1 = new Chunk(Utills.getFarsiName(fixture.getLocalTeamName()), font);
                     phrase.add(chunk1);
                     cell = new PdfPCell(phrase);
                     cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);
@@ -532,7 +633,7 @@ public class Jobs extends TimerTask
 
                     // Visitoe Team
                     phrase = new Phrase("");
-                    chunk1 = new Chunk(fixture.getVisitorTeamName(), font);
+                    chunk1 = new Chunk(Utills.getFarsiName(fixture.getVisitorTeamName()), font);
                     phrase.add(chunk1);
                     cell = new PdfPCell(phrase);
                     cell.setBackgroundColor(count % 2 == 1 ? WebColors.getRGBColor("#e5e6e9") : BaseColor.WHITE);

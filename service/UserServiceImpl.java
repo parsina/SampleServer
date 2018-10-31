@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.User;
+import com.coin.app.model.enums.AccountStatus;
 import com.coin.app.model.enums.UserRole;
 import com.coin.app.model.enums.UserStatus;
 import com.coin.app.repository.UserRepository;
@@ -126,6 +127,7 @@ public class UserServiceImpl implements UserService
             while(user.getAccount() == null)
                 user.setAccount(accountService.createAccount(user));
             user.setStatus(UserStatus.ACTIVE);
+            user.getAccount().setStatus(AccountStatus.ACTIVE);
             userRepository.save(user);
             result.setSuccess(true);
             result.setMessage("User activation is finished");
@@ -213,9 +215,15 @@ public class UserServiceImpl implements UserService
     }
 
     @Override
-    public User findByUsername(String username)
+    public User findByEmail(String email)
     {
-        return userRepository.findByEmail(username);
+        return userRepository.findByEmail(email);
+    }
+
+    @Override
+    public User findByUserName(String username)
+    {
+        return userRepository.findByUsername(username);
     }
 
     @Override

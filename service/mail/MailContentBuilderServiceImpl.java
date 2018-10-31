@@ -11,11 +11,11 @@ public class MailContentBuilderServiceImpl implements MailContentBuilderService
     @Autowired
     private TemplateEngine templateEngine;
 
-    public String build(String message, String link, String templete)
+    public String build(String message, String data, String templete)
     {
         Context context = new Context();
         context.setVariable("message", message);
-        context.setVariable("link", link);
+        context.setVariable("data", data);
         return templateEngine.process(templete, context);
     }
 }

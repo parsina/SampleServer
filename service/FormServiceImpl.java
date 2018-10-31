@@ -539,17 +539,19 @@ public class FormServiceImpl implements FormService
             ResultData matchData = new ResultData(true, "");
             matchData.addProperty("id", fixture.getId());
             matchData.addProperty("formTemplateId", fixture.getFormTemplate().getId());
-            matchData.addProperty("homeName", fixture.getLocalTeamName());
-            matchData.addProperty("homeCountry", fixture.getLocalCountryName());
+            matchData.addProperty("homeName", Utills.getFarsiName(fixture.getLocalTeamName()));
+            matchData.addProperty("homeCountry", Utills.getFarsiName(fixture.getLocalCountryName()));
             matchData.addProperty("homeCountryFlag", fixture.getLocalCountryFlag());
             matchData.addProperty("homeLogo", fixture.getLocalTeamLogo());
             matchData.addProperty("homeScore", fixture.getLocalTeamScore());
-            matchData.addProperty("awayName", fixture.getVisitorTeamName());
-            matchData.addProperty("awayCountry", fixture.getVisitorCountryName());
+            matchData.addProperty("awayName", Utills.getFarsiName(fixture.getVisitorTeamName()));
+            matchData.addProperty("awayCountry", Utills.getFarsiName(fixture.getVisitorCountryName()));
             matchData.addProperty("awayCountryFlag", fixture.getVisitorCountryFlag());
             matchData.addProperty("awayLogo", fixture.getVisitorTeamLogo());
             matchData.addProperty("awayScore", fixture.getVisitorTeamScore());
-            matchData.addProperty("league", fixture.getLeagueName());
+            matchData.addProperty("league", Utills.getFarsiName(fixture.getLeagueName()));
+            if( fixture.getLocalTeamCountryId().equals(fixture.getVisitorTeamCountryId()))
+                matchData.addProperty("leagueCountry", Utills.getFarsiName(fixture.getVisitorCountryName()));
             matchData.addProperty("time", Utills.shortDisplayForTime(fixture.getTime()));
             matchData.addProperty("date", Utills.nameDisplayForDate(fixture.getDate(), false));
             matchData.addProperty("minute", fixture.getMinute() == null ? "00" : fixture.getMinute().length() == 1 ? '0' + fixture.getMinute() : fixture.getMinute());

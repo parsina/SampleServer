@@ -241,7 +241,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
                 if (props.get(country) == null)
                 {
                     resultData.addProperty("name", country);
-                    resultData.addProperty("farsiName", "کشور");
+                    resultData.addProperty("farsiName", "");
                 }
                 else
                     if(!onlyWithFarsiName)
@@ -298,7 +298,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
                 if (props.get(league) == null)
                 {
                     resultData.addProperty("name", league);
-                    resultData.addProperty("farsiName", "لیگ");
+                    resultData.addProperty("farsiName", "");
                 }
                 else
                 if(!onlyWithFarsiName)
@@ -358,7 +358,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
                 if (props.get(team) == null)
                 {
                     resultData.addProperty("name", team);
-                    resultData.addProperty("farsiName", "تیم");
+                    resultData.addProperty("farsiName", "");
                 }
                 else
                 if(!onlyWithFarsiName)

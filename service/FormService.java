@@ -49,4 +49,8 @@ public interface FormService
     ResultData findUserFormData(Long formId, List<FormStatus> statuses);
 
     ResponseEntity<InputStreamResource> downloadPhotoCal(Long formTemplateId) throws FileNotFoundException;
+
+    ResultData findFinalizedForms(String formTemplateId, String filter, String sortOrder, String sortBy, int pageNumber,int pageSize);
+
+    Long countFinalizedForms(String formTemplateId);
 }

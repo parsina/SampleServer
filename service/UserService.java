@@ -22,6 +22,8 @@ public interface UserService
 
     void save(User user);
 
+    ResultData sendInvitations(List<String> emails);
+
     User findByEmail(String email);
 
     User findByUserName(String username);

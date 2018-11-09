@@ -7,10 +7,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.coin.app.dto.data.ResultData;
+import com.coin.app.model.Account;
 import com.coin.app.model.Transaction;
 import com.coin.app.model.Wallet;
 import com.coin.app.model.enums.TransactionStatus;
 import com.coin.app.model.enums.TransactionType;
+import com.coin.app.repository.AccountRepository;
 import com.coin.app.repository.TransactionRepository;
 import com.coin.app.repository.WalletRepository;
 import com.coin.app.util.Utills;
@@ -34,6 +36,9 @@ public class TransactionServiceImpl implements TransactionService
     @Autowired
     private BitcoinJService bitcoinJService;
 
+    @Autowired
+    private AccountRepository accountRepository;
+
     @Override
     public Long countUserAccountTransactions()
     {
@@ -41,11 +46,26 @@ public class TransactionServiceImpl implements TransactionService
     }
 
     @Override
-    public ResultData getUserAccountTransactions(String filter, String sortOrder, String sortBy, int pageNumber,int pageSize)
+    public ResultData getUserAccountTransactions(String filter, String sortOrder, String sortBy, int pageNumber, int pageSize)
     {
         ResultData data = new ResultData(true, "");
         List<ResultData> transactionData = new ArrayList<>();
-        Sort orderBy = new Sort(sortOrder.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC, sortBy.isEmpty() ? "id" : sortBy);
+
+        List<String> sorts = new ArrayList<>();
+        if(sortBy.isEmpty() || sortBy.equals("updateDate"))
+        {
+            sorts.add("updateDate");
+            sorts.add("updateTime");
+        }
+        else
+        if(sortBy.equals("value"))
+        {
+            sorts.add("totalValue");
+        }
+        else
+            sorts.add(sortBy);
+        Sort orderBy = new Sort(sortOrder.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC, sorts);
+
         for (Transaction transaction : transactionRepository.findByAccount(userService.getCurrentUser().getAccount(), PageRequest.of(pageNumber, pageSize, orderBy)))
         {
             ResultData trData = new ResultData(true, "");
@@ -57,6 +77,7 @@ public class TransactionServiceImpl implements TransactionService
 
             trData.addProperty("description", transaction.getDescription());
             trData.addProperty("value", transaction.getTotalValue());
+            trData.addProperty("fee", transaction.getFee());
 
             trData.addProperty("status", transaction.getStatus().name());
             trData.addProperty("type", transaction.getType().name());
@@ -67,15 +88,16 @@ public class TransactionServiceImpl implements TransactionService
     }
 
     @Override
-    public ResultData transfer(String userId, String address, String amountValue, String securityCode, String userSecurityCode)
+    public ResultData transfer(String userId, String address, String amountValue, String userSecurityCode)
     {
         ResultData resultData = new ResultData(true, "");
-        if(userService.getCurrentUser().getId().equals(Long.valueOf(userId)))
+        if (userService.getCurrentUser().getId().equals(Long.valueOf(userId)))
         {
-            if(!userSecurityCode.equals(securityCode))
+            String securityCode = userService.getCurrentUser().getAccount().getDescription();
+            if (!userSecurityCode.trim().equals(securityCode.trim()))
                 return new ResultData(false, "Security code is wrong !");
 
-            if(Long.valueOf(amountValue) < 20000)
+            if (Long.valueOf(amountValue) < 20000)
                 return new ResultData(false, "Amount is under 20000 !");
 
             Wallet wallet = userService.getCurrentUser().getAccount().getWallet();
@@ -83,11 +105,35 @@ public class TransactionServiceImpl implements TransactionService
             Long balance = Long.valueOf(wallet.getBalance());
             Long fee = 1000 + Math.round(amount * 0.005);
 
-            if(amount > balance - fee)
+            if (amount > balance - fee)
                 return new ResultData(false, "Amount is out of balance !");
 
-            //Forward coins to user external wallet
-            TransactionStatus status = bitcoinJService.forwardCoins(amount, address);
+            TransactionStatus status = TransactionStatus.CONFIRMED;
+            Wallet destinationWallet = walletRepository.findByAddress(address);
+            if (destinationWallet == null)
+                status = bitcoinJService.forwardCoins(amount, address); //Forward coins to user external wallet
+            else
+            {
+                // Create destination user wallet transaction
+                Transaction destinationUserTransaction = new Transaction();
+                destinationUserTransaction.setCreatedDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
+                destinationUserTransaction.setCreatedTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
+                destinationUserTransaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
+                destinationUserTransaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
+                Account toAccount = accountRepository.findByWallet(destinationWallet);
+                destinationUserTransaction.setTxId("TRANSFER-FROM-" + userService.getCurrentUser().getId()  + "-TO-" + toAccount.getUser().getId() + "-" + transactionRepository.count());
+                destinationUserTransaction.setType(TransactionType.DEPOSIT);
+                destinationUserTransaction.setTotalValue(amount);
+                destinationUserTransaction.setStatus(status);
+                destinationUserTransaction.setDescription("واریز به حساب شما از طرف کاربر " +  userService.getCurrentUser().getUsername());
+                destinationUserTransaction.setAccount(toAccount);
+                transactionRepository.save(destinationUserTransaction);
+
+                //Set destination user new balance value
+                Long newBalance = Long.valueOf(destinationWallet.getBalance()) + amount;
+                destinationWallet.setBalance(newBalance + "");
+                walletRepository.save(destinationWallet);
+            }
 
             // Create user transaction
             Transaction userTransaction = new Transaction();
@@ -95,16 +141,16 @@ public class TransactionServiceImpl implements TransactionService
             userTransaction.setCreatedTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
             userTransaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
             userTransaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
-            userTransaction.setTxId("TRANSFER-TO-" + userService.getCurrentUser().getId() + "-" + transactionRepository.count());
+            userTransaction.setTxId("WITHDRAW-BY-" + userService.getCurrentUser().getId() + "-" + transactionRepository.count());
             userTransaction.setType(TransactionType.WITHDRAWAL);
             userTransaction.setTotalValue(amount);
             userTransaction.setFee(fee + "");
             userTransaction.setStatus(status);
-            userTransaction.setDescription("انتقال به آدرس " + address);
+            userTransaction.setDescription("برداشت از حساب و انتقال به آدرس " + address);
             userTransaction.setAccount(userService.getCurrentUser().getAccount());
             transactionRepository.save(userTransaction);
 
-            if(!userTransaction.getStatus().equals(TransactionStatus.FAILED))
+            if (!userTransaction.getStatus().equals(TransactionStatus.FAILED))
             {
                 //Add fee to admin balance
                 Wallet adminWallet = userService.findByUserName("Admin").getAccount().getWallet();

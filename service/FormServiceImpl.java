@@ -156,7 +156,7 @@ public class FormServiceImpl implements FormService
                 Transaction transaction = transactionRepository.findByTxId("FAT-" + form.getId() + "-" + form.getAccount().getId() + "-" + form.getFormTemplate().getId());
                 transactionRepository.delete(transaction);
                 Wallet wallet = walletRepository.findById(form.getAccount().getWallet().getId()).get();
-                if(form.isReal())
+                if (form.isReal())
                 {
                     wallet.setBalance((Long.valueOf(wallet.getBalance()) + form.getValue()) + "");
                     walletRepository.save(wallet);
@@ -244,18 +244,21 @@ public class FormServiceImpl implements FormService
             form = formRepository.save(form);
 
             //Create transaction
-            Transaction transaction = new Transaction();
-            transaction.setCreatedDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
-            transaction.setCreatedTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
-            transaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
-            transaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
-            transaction.setStatus(TransactionStatus.CONFIRMED);
-            transaction.setType(TransactionType.COST);
-            transaction.setAccount(account);
-            transaction.setTotalValue(value);
-            transaction.setTxId("FAT-" + form.getId() + "-" + account.getId() + "-" + formTemplate.getId());
-            transaction.setDescription(formTemplate.getName() + "-" + formCounts + (realForm ? "" : "-مجازی"));
-            transactionRepository.save(transaction);
+            if(realForm)
+            {
+                Transaction transaction = new Transaction();
+                transaction.setCreatedDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
+                transaction.setCreatedTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
+                transaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
+                transaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
+                transaction.setStatus(TransactionStatus.CONFIRMED);
+                transaction.setType(TransactionType.COST);
+                transaction.setAccount(account);
+                transaction.setTotalValue(value);
+                transaction.setTxId("FAT-" + form.getId() + "-" + account.getId() + "-" + formTemplate.getId());
+                transaction.setDescription(formTemplate.getName() + "-" + formCounts);
+                transactionRepository.save(transaction);
+            }
 
 
             for (Object matchData : matchesData)
@@ -321,7 +324,7 @@ public class FormServiceImpl implements FormService
             Form form = formRepository.findById(formId).get();
             Account account = userService.findById(userId).getAccount();
 
-            if(realForm)
+            if (realForm)
             {
                 //Checking account balance
                 if (value > Long.valueOf(account.getWallet().getBalance()))
@@ -343,17 +346,31 @@ public class FormServiceImpl implements FormService
 
             //Update transaction
             Transaction transaction = transactionRepository.findByTxId("FAT-" + form.getId() + "-" + form.getAccount().getId() + "-" + form.getFormTemplate().getId());
-            transaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
-            transaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
-            transaction.setTotalValue(value);
-            int descSize = transaction.getDescription().split("-").length;
-            if(descSize == 2 && !realForm)
-                transaction.setDescription(transaction.getDescription() + "-مجازی");
-            else if(descSize == 3 && realForm)
-                transaction.setDescription(transaction.getDescription().split("-")[0] + "-"+ transaction.getDescription().split("-")[1]);
-            transactionRepository.save(transaction);
-
-
+            if(transaction == null && realForm)
+            {
+                long formCounts = formRepository.countByAccount(account) + 1;
+                transaction = new Transaction();
+                transaction.setCreatedDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
+                transaction.setCreatedTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
+                transaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
+                transaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
+                transaction.setStatus(TransactionStatus.CONFIRMED);
+                transaction.setType(TransactionType.COST);
+                transaction.setAccount(account);
+                transaction.setTotalValue(value);
+                transaction.setTxId("FAT-" + form.getId() + "-" + account.getId() + "-" + form.getFormTemplate().getId());
+                transaction.setDescription(form.getFormTemplate().getName() + "-" + formCounts);
+                transactionRepository.save(transaction);
+            }
+            else if( transaction != null && realForm)
+            {
+                transaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
+                transaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
+                transaction.setTotalValue(value);
+                transactionRepository.save(transaction);
+            }
+            else if( transaction != null)
+                transactionRepository.delete(transaction);
 
             List<Match> matches = matchRepository.findByForm(form);
             for (Object matchData : matchesData)
@@ -503,6 +520,7 @@ public class FormServiceImpl implements FormService
             formMap.put("real", form.isReal());
             formMap.put("templateId", form.getFormTemplate().getId());
             formMap.put("templateName", form.getFormTemplate().getName());
+            formMap.put("templateType", form.getFormTemplate().getType().name());
             forms.add(formMap);
         }
         resultData.addProperty("forms", forms);
@@ -550,7 +568,7 @@ public class FormServiceImpl implements FormService
             matchData.addProperty("awayLogo", fixture.getVisitorTeamLogo());
             matchData.addProperty("awayScore", fixture.getVisitorTeamScore());
             matchData.addProperty("league", Utills.getFarsiName(fixture.getLeagueName()));
-            if( fixture.getLocalTeamCountryId().equals(fixture.getVisitorTeamCountryId()))
+            if (fixture.getLocalTeamCountryId().equals(fixture.getVisitorTeamCountryId()))
                 matchData.addProperty("leagueCountry", Utills.getFarsiName(fixture.getVisitorCountryName()));
             matchData.addProperty("time", Utills.shortDisplayForTime(fixture.getTime()));
             matchData.addProperty("date", Utills.nameDisplayForDate(fixture.getDate(), false));
@@ -632,5 +650,46 @@ public class FormServiceImpl implements FormService
             }
         }
         return retStr.toString();
+    }
+
+    @Override
+    public ResultData findFinalizedForms(String formTemplateId, String filter, String sortOrder, String sortBy, int pageNumber, int pageSize)
+    {
+        ResultData data = new ResultData(true, "");
+        List<Map> formList = new ArrayList<>();
+        List<String> sorts = new ArrayList<>();
+        if(sortBy.isEmpty() || sortBy.equals("createdDate"))
+        {
+            sorts.add("createdDate");
+            sorts.add("createdTime");
+        }
+        else
+        if(sortBy.equals("username"))
+            sorts.add("account.user.username");
+        else
+            sorts.add(sortBy);
+
+        Sort orderBy = new Sort(sortOrder.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC, sorts);
+        for (Form form : formRepository.findByFormTemplateIdAndStatus(Long.valueOf(formTemplateId), FormStatus.FINALIZED, PageRequest.of(pageNumber, pageSize, orderBy)))
+        {
+            Map<String, Object> formMap = new HashMap<>();
+            formMap.put("id", form.getId());
+            formMap.put("name", form.getName());
+            formMap.put("value", form.getValue());
+            formMap.put("score", form.getScore());
+            formMap.put("createdDate", Utills.nameDisplayForDate(form.getCreatedDate().toString(), false));
+            formMap.put("createdTime", Utills.shortDisplayForTime(form.getCreatedTime().toString()));
+            formMap.put("real", form.isReal());
+            formMap.put("username", form.getAccount().getUser().getUsername());
+            formList.add(formMap);
+        }
+        data.addProperty("forms", formList);
+        return data;
+    }
+
+    @Override
+    public Long countFinalizedForms(String formTemplateId)
+    {
+        return formRepository.countByFormTemplateIdAndStatus(Long.valueOf(formTemplateId), FormStatus.FINALIZED);
     }
 }

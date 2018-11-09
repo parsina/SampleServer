@@ -36,6 +36,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.spongycastle.crypto.params.KeyParameter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -234,23 +235,25 @@ public class BitCoinJServiceImpl implements BitcoinJService
         transaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
         transaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
         transaction.setTxId(tx.getHashAsString());
-        transaction.setFee(tx.getFee() == null ? null : tx.getFee().getValue() + "");
-        long fee = tx.getFee() == null ? 0 : tx.getFee().getValue();
-        transaction.setTotalValue(Math.abs(tx.getValue(w).getValue()) - fee);
         transaction.setStatus(TransactionStatus.UNCONFIRMED);
         if( tx.getValue(w).getValue() > 0 )
         {
+            transaction.setTotalValue(tx.getValue(w).getValue());
             transaction.setType(TransactionType.DEPOSIT);
             transaction.setDescription("در انتظار تایید واریز ...");
         }
         else
         {
+            transaction.setFee(tx.getFee() == null ? null : tx.getFee().getValue() + "");
+            long fee = tx.getFee() == null ? 0 : tx.getFee().getValue();
+            transaction.setTotalValue(Math.abs(tx.getValue(w).getValue()) - fee);
             for(TransactionOutput out : outputs)
                 if(Math.abs(tx.getValue(w).getValue()) - tx.getFee().getValue() == out.getValue().getValue())
                 {
                     transaction.setType(TransactionType.FORWARD);
                     transaction.setDescription("انتقال " + Utills.commaSeparator(String.valueOf(Math.abs(tx.getValue(w).getValue()) - fee)) +  " ساتوشی به آدرس "
-                            + out.getAddressFromP2PKHScript(params) + " و " + Math.round((Math.abs(tx.getValue(w).getValue()) - 1000)  * 0.005) + " ساتوشی کارمزد به حساب مدیریت");
+                            + (out.getAddressFromP2PKHScript(params) == null ? out.getAddressFromP2SH(params) : out.getAddressFromP2PKHScript(params))
+                            + " و " + Math.round((Math.abs(tx.getValue(w).getValue()) - 1000)  * 0.005) + " ساتوشی کارمزد به حساب مدیریت");
                     break;
                 }
 //

@@ -31,4 +31,8 @@ public interface FormRepository  extends JpaRepository<Form, Long>
     List<Form> findByFormTemplateAndRealOrderByCreatedDateAscCreatedTimeAsc(FormTemplate formTemplate, boolean real);
 
     Long countByAccountAndStatusIn(Account account, List<FormStatus> statuses);
+
+    List<Form> findByFormTemplateIdAndStatus(Long id, FormStatus status, Pageable pageable);
+
+    Long countByFormTemplateIdAndStatus(Long id, FormStatus status);
 }

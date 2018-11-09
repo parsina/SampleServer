@@ -1,6 +1,8 @@
 package com.coin.app.service.background;
 
+import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -39,9 +41,11 @@ import com.itextpdf.text.BaseColor;
 import com.itextpdf.text.Chunk;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Element;
 import com.itextpdf.text.Font;
 import com.itextpdf.text.FontFactory;
 import com.itextpdf.text.Image;
+import com.itextpdf.text.Paragraph;
 import com.itextpdf.text.Phrase;
 import com.itextpdf.text.html.WebColors;
 import com.itextpdf.text.pdf.BaseFont;
@@ -50,6 +54,7 @@ import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 import com.itextpdf.text.pdf.draw.LineSeparator;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -85,9 +90,8 @@ public class Jobs extends TimerTask
     @Autowired
     private UserRepository userRepository;
 
-    private LocalDate date = LocalDate.now(ZoneId.of("Asia/Tehran")).minusDays(0);
+    private LocalDate date = LocalDate.now(ZoneId.of("Asia/Tehran")).minusDays(1);
 
-    //    @Async
     @Override
     public void run()
     {
@@ -111,6 +115,20 @@ public class Jobs extends TimerTask
         for (FormTemplate formTemplate : formTemplateRepository.findAllByStatusIsInOrderByCreatedDateAsc(formTemplateStatuses))
             if (winnerRepository.countByFormFormTemplate(formTemplate) == 0)
                 findWinners(formTemplate);
+
+        formTemplateStatuses.add(FormTemplateStatus.CLOSE);
+        for (FormTemplate formTemplate : formTemplateRepository.findAllByStatusIsInOrderByCreatedDateAsc(formTemplateStatuses))
+            if(!photoCalExist(formTemplate))
+                try
+                {
+                    createPhotoCalPDF(formTemplate.getId());
+                } catch (IOException e)
+                {
+                    e.printStackTrace();
+                } catch (DocumentException e)
+                {
+                    e.printStackTrace();
+                }
 
 
         // Updates fixture data every 1 min to detect the changes in used fixtures and save data to push them to users
@@ -334,7 +352,6 @@ public class Jobs extends TimerTask
         winnerRepository.save(winner);
 
 
-
         //User parent transaction
         transaction = new Transaction();
         transaction.setCreatedDate(LocalDate.now());
@@ -384,29 +401,87 @@ public class Jobs extends TimerTask
         walletRepository.save(wallet);
     }
 
+    private boolean photoCalExist(FormTemplate formTemplate)
+    {
+        String fileName = "PhotoCal_" + formTemplate.getType().name() + "_" + formTemplate.getId() + ".pdf";
+        String destination = "D://coin/photoCal/" + fileName;
+
+        File f = new File(destination);
+        return f.exists();
+    }
+
     private boolean createPhotoCalPDF(Long formTemplateId) throws IOException, DocumentException
     {
         FormTemplate formTemplate = formTemplateRepository.findById(formTemplateId).get();
 
         List<Form> forms = formRepository.findByFormTemplateAndRealOrderByCreatedDateAscCreatedTimeAsc(formTemplate, true);
 
+        String fileName = "PhotoCal_" + formTemplate.getType().name() + "_" + formTemplate.getId() + ".pdf";
+        String destination = "D://coin/photoCal/" + fileName;
+        String fontPath = "C://Users/javad.farzaneh/projects/Examples/coinServer/src/main/resources/font/Vazir.ttf";
+        Font font = FontFactory.getFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+        font.setSize(10);
+
+        Font titleFont = FontFactory.getFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+        titleFont.setColor(BaseColor.BLACK);
+        titleFont.setSize(16);
+
+        Font blueFont = FontFactory.getFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+        blueFont.setColor(BaseColor.BLUE);
+        blueFont.setSize(8);
+
+        /////////////////////////////////////////////////////////////////////////////////
+        Document document = new Document();
+        PdfWriter.getInstance(document, new FileOutputStream(destination));
+        document.open();
+
+        Paragraph p = new Paragraph("", font);
+        p.setSpacingAfter(20);
+
+        PdfPTable table = new PdfPTable(1);
+        table.setSpacingAfter(10);
+        table.setSpacingBefore(50);
+        table.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
+        table.setHorizontalAlignment(300);
+
+        Phrase phrase = new Phrase("");
+        Chunk chunk1 = new Chunk(formTemplate.getName(), titleFont);
+        phrase.add(chunk1);
+        PdfPCell cell = new PdfPCell(phrase);
+        cell.setBorder(0);
+        table.addCell(cell);
+        p.add(table);
+        p.setAlignment(Element.ALIGN_CENTER);
+        document.add(p);
+
+        table = new PdfPTable(1);
+        table.setWidthPercentage(100);
+        table.setSpacingAfter(10);
+        table.setSpacingBefore(50);
+        table.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
+
+        phrase = new Phrase("");
+        chunk1 = new Chunk("تعداد فرم ها: " , font);
+        Chunk chunk2 = new Chunk( String.valueOf(forms.size()) , blueFont);
+        phrase.add(chunk1);
+        phrase.add(chunk2);
+        cell = new PdfPCell(phrase);
+        cell.setBorder(0);
+        table.addCell(cell);
+
+        phrase = new Phrase("");
+        chunk1 = new Chunk("مبلغ جایزه: " , font);
+        chunk2 = new Chunk( Utills.commaSeparator(formTemplate.getTotalValue().toString()) + " ساتوشی" , blueFont);
+        phrase.add(chunk1);
+        phrase.add(chunk2);
+        cell = new PdfPCell(phrase);
+        cell.setBorder(0);
+        table.addCell(cell);
+
+        document.add(table);
+
         if (forms.size() > 0)
         {
-            String fileName = "PhotoCal_" + formTemplate.getType().name() + "_" + formTemplate.getId() + ".pdf";
-            String destination = "D://coin/photoCal/" + fileName;
-            String fontPath = "C://Users/javad.farzaneh/projects/Examples/coinServer/src/main/resources/font/Vazir.ttf";
-            Font font = FontFactory.getFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-            font.setSize(10);
-            Font blueFont = FontFactory.getFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-            blueFont.setColor(BaseColor.BLUE);
-            blueFont.setSize(8);
-
-            /////////////////////////////////////////////////////////////////////////////////
-            Document document = new Document();
-            PdfWriter.getInstance(document, new FileOutputStream(destination));
-            document.open();
-
-
             int formCount = 0;
             for (Form form : forms)
             {
@@ -414,18 +489,18 @@ public class Jobs extends TimerTask
 
                 // Header Data
                 //////////////////////////////////////////////////////////////////////////////////////////////////////
-                PdfPTable table = new PdfPTable(4);
+                table = new PdfPTable(4);
                 table.setWidthPercentage(100);
                 table.setSpacingAfter(10);
                 table.setSpacingBefore(50);
                 table.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
 
-                Phrase phrase = new Phrase("");
-                Chunk chunk1 = new Chunk("کاربر: ", font);
-                Chunk chunk2 = new Chunk(form.getAccount().getUser().getUsername(), blueFont);
+                phrase = new Phrase("");
+                chunk1 = new Chunk("کاربر: ", font);
+                chunk2 = new Chunk(form.getAccount().getUser().getUsername(), blueFont);
                 phrase.add(chunk1);
                 phrase.add(chunk2);
-                PdfPCell cell = new PdfPCell(phrase);
+                cell = new PdfPCell(phrase);
                 cell.setBorder(0);
                 table.addCell(cell);
 
@@ -649,9 +724,9 @@ public class Jobs extends TimerTask
                 if (formCount % 2 == 0)
                     document.newPage();
             }
-
-            document.close();
         }
+
+        document.close();
 
         return true;
     }

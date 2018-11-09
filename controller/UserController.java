@@ -8,6 +8,7 @@ import com.coin.app.model.User;
 import com.coin.app.service.UserService;
 import com.coin.app.service.mail.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -60,6 +61,13 @@ public class UserController
     {
         System.out.println(input);
         return true;
+    }
+
+    @PostMapping("/sendInvitations")
+    @Secured({"ROLE_ADMIN", "ROLE_USER"})
+    public ResultData sendInvitationEmails(@RequestBody Map<String, List<String>> input)
+    {
+        return userService.sendInvitations(input.get("emails"));
     }
 
     @GetMapping(path = {"/{id}"})

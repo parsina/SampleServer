@@ -6,5 +6,7 @@ public interface EmailService
 {
     void sendActivationLink(String email);
 
+    void sendInvitationEmail(String email);
+
     ResultData sendWithdrawalCode(String userId);
 }

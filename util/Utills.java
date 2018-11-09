@@ -87,12 +87,13 @@ public class Utills
 
     public static String getFarsiName(String key)
     {
+        if(key == null)
+            return null;
         try
         {
             countryProps.load(new FileInputStream(propertiesPath + "country.properties"));
             leagueProps.load(new FileInputStream(propertiesPath + "league.properties"));
             teamProps.load(new FileInputStream(propertiesPath + "team.properties"));
-
         } catch (IOException ex)
         {
             ex.printStackTrace();

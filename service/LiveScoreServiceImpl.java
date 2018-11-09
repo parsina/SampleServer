@@ -33,6 +33,7 @@ import com.google.gson.JsonParser;
 import ir.huri.jcal.JalaliCalendar;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -56,6 +57,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
     Properties props = new Properties();
     String path = Thread.currentThread().getContextClassLoader().getResource("").getPath();
 
+    @Async
     @Override
     public void loadFixtures()
     {

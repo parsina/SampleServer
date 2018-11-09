@@ -30,7 +30,7 @@ public class UserAccountController
     private TransactionService transactionService;
 
     @Secured({"ROLE_ADMIN", "ROLE_USER"})
-    @GetMapping("/userAccount")
+    @PostMapping("/userAccount")
     public ResultData userAccount()
     {
         return accountService.getUserAccount();
@@ -61,7 +61,7 @@ public class UserAccountController
     @PostMapping("/withdrawFromUserAccount")
     public ResultData withdrawFromUserAccount(@RequestBody Map<String, String> input)
     {
-        return transactionService.transfer(input.get("userId"), input.get("address"), input.get("amount"), input.get("securityCode"), input.get("userSecurityCode"));
+        return transactionService.transfer(input.get("userId"), input.get("address"), input.get("amount"), input.get("userSecurityCode"));
     }
 
 }

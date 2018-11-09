@@ -91,9 +91,8 @@ public class FormController
         return formService.findFormTemplate(id);
     }
 
-    @Async
     @GetMapping("/updateFormTemplate")
-    public SseEmitter updateFTData(Long id)
+    public SseEmitter updateFTData()
     {
         SseEmitter notifier = new SseEmitter(60000L);
         try
@@ -166,6 +165,19 @@ public class FormController
     {
         return formService.updateForm(Long.valueOf(input.get("formId").toString()), Long.valueOf(input.get("userId").toString()), Boolean.valueOf(input.get("real").toString()), (List<ResultData>) input.get("formData"));
     }
+
+    @PostMapping("/finalizeFormsData")
+    public ResultData finalizeFormsData(@RequestBody Map<String, String> input)
+    {
+        return formService.findFinalizedForms(input.get("templateId"), input.get("filter"), input.get("sortOrder"), input.get("sortBy"), Integer.valueOf(input.get("pageNumber")), Integer.valueOf(input.get("pageSize")));
+    }
+
+    @PostMapping("/finalizeFormsCount")
+    public Long finalizeFormsCount(@RequestBody Map<String, String> input)
+    {
+        return formService.countFinalizedForms(input.get("templateId"));
+    }
+
 
     @Secured({"ROLE_ADMIN", "ROLE_USER"})
     @PostMapping("/userForms")

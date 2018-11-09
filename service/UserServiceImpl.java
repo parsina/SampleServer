@@ -1,5 +1,6 @@
 package com.coin.app.service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -79,9 +80,7 @@ public class UserServiceImpl implements UserService
                 result.setMessage("User Exist !");
                 result.addProperty("userEmail", user.getEmail()); // Should be removed
                 return result;
-            }
-            else
-            if (user != null && user.getStatus().equals(UserStatus.INVITED))
+            } else if (user != null && user.getStatus().equals(UserStatus.INVITED))
             {
                 user.setCreatedDate(new Date());
                 user.setUsername(username);
@@ -91,8 +90,8 @@ public class UserServiceImpl implements UserService
                 userRepository.save(user);
                 result.setSuccess(true);
                 result.setMessage("Invited User Created !");
-            }
-            else
+                result.addProperty("userEmail", user.getEmail());
+            } else
             {
                 user = new User();
                 user.setCreatedDate(new Date());
@@ -124,7 +123,7 @@ public class UserServiceImpl implements UserService
                 result.setMessage("User is enabled before");
                 return result;
             }
-            while(user.getAccount() == null)
+            while (user.getAccount() == null)
                 user.setAccount(accountService.createAccount(user));
             user.setStatus(UserStatus.ACTIVE);
             user.getAccount().setStatus(AccountStatus.ACTIVE);
@@ -143,13 +142,13 @@ public class UserServiceImpl implements UserService
     {
         ResultData result = new ResultData(false, "");
         User user = userRepository.findByEmail(username);
-        if( user == null )
+        if (user == null)
             user = userRepository.findByEmail(username);
         if (user == null)
         {
             result.setMessage("Username/Email is incorrect !");
             return result;
-        } else if (user.getStatus().equals(UserStatus.INACTIVE))
+        } else if (user.getStatus().equals(UserStatus.INACTIVE) || user.getStatus().equals(UserStatus.INVITED))
         {
             result.setMessage("User is not Active");
             return result;
@@ -161,7 +160,7 @@ public class UserServiceImpl implements UserService
         {
             result.setMessage("Password is incorrect !");
             return result;
-        } else
+        } else if(user.getStatus().equals(UserStatus.ACTIVE))
         {
             Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getEmail(), password));
             SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -210,8 +209,48 @@ public class UserServiceImpl implements UserService
     @Override
     public void save(User user)
     {
-//        user.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
         userRepository.save(user);
+    }
+
+    @Override
+    public ResultData sendInvitations(List<String> emails)
+    {
+        List<String> validEmails = new ArrayList<>();
+        List<String> existEmails = new ArrayList<>();
+        List<String> wrongEmails = new ArrayList<>();
+
+        for (String email : emails)
+        {
+            if (Validator.isValidEmailAddress(email))
+            {
+                if (userRepository.findByEmail(email) == null)
+                {
+                    User user = new User();
+                    user.setCreatedDate(new Date());
+                    user.setParentId(getCurrentUser().getId());
+                    user.setEmail(email.toLowerCase());
+                    user.setUsername("InvitedUser-" + email);
+                    user.setPassword(passwordEncoder.encode("123123"));
+                    user.setStatus(UserStatus.INVITED);
+                    user.setRole(UserRole.ROLE_USER);
+                    user.setConfirmationToken(UUID.randomUUID().toString());
+                    userRepository.save(user);
+                    emailService.sendInvitationEmail(email);
+                    validEmails.add(email);
+                }
+                else
+                    existEmails.add(email);
+            }
+            else
+                wrongEmails.add(email);
+        }
+
+        ResultData resultData = new ResultData(true, "");
+        resultData.addProperty("validEmails", validEmails);
+        resultData.addProperty("existEmails", existEmails);
+        resultData.addProperty("wrongEmails", wrongEmails);
+
+        return resultData;
     }
 
     @Override

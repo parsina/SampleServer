@@ -1,7 +1,11 @@
 package com.coin.app.service.mail;
 
+import java.util.Random;
+
 import com.coin.app.dto.data.ResultData;
+import com.coin.app.model.Account;
 import com.coin.app.model.User;
+import com.coin.app.repository.AccountRepository;
 import com.coin.app.service.AccountService;
 import com.coin.app.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +27,9 @@ public class EmailServiceImpl implements EmailService
 
     @Autowired
     private AccountService accountService;
+
+    @Autowired
+    private AccountRepository accountRepository;
 
     @Autowired
     private MailContentBuilderService mailContentBuilderService;
@@ -58,15 +65,48 @@ public class EmailServiceImpl implements EmailService
         System.out.println(">>>>> Invitation email send to : " + user.getEmail());
     }
 
+    @Async
+    @Override
+    public void sendInvitationEmail(String email)
+    {
+        String message = "شما به شرکت در مسابقات پیش بینی فوتبال دعوت شده اید. لطفا جهت شرکت در مسابقات روی لینک زیر کلیک نمایید. " ;
+        String link = "http://localhost:4200/";
+
+        MimeMessagePreparator messagePreparator = mimeMessage ->
+        {
+            MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
+            messageHelper.setTo(email);
+            messageHelper.setSubject("ثبت نام");
+            String content = mailContentBuilderService.build(message, link, "invitation");
+            messageHelper.setText(content, true);
+        };
+        try
+        {
+            sender.send(messagePreparator);
+        } catch (MailException e)
+        {
+            // runtime exception; compiler will not force you to handle it
+            System.out.println(">>>>> Email sending problem!");
+        }
+
+        System.out.println(">>>>> Invitation email send to : " + email);
+    }
+
+    @Async
     @Override
     public ResultData sendWithdrawalCode(String userId)
     {
         String message = "لطفا کد امنیتی زیر را در محل مربوطه وارد نمایید: " ;
-        String code = "1234" ;
+        Random rnd = new Random();
+        String code = ( 100000 + rnd.nextInt(900000 )) + " ";
 
         ResultData resultData = new ResultData(true, "");
         if(userService.getCurrentUser().getId().equals(Long.valueOf(userId)))
         {
+            Account account = userService.getCurrentUser().getAccount();
+            account.setDescription(code);
+            accountRepository.save(account);
+
             MimeMessagePreparator messagePreparator = mimeMessage ->
             {
                 MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
@@ -78,7 +118,6 @@ public class EmailServiceImpl implements EmailService
             try
             {
                 sender.send(messagePreparator);
-                resultData.addProperty("securityCode", code);
                 return resultData;
             } catch (MailException e)
             {

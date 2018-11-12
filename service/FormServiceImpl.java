@@ -34,6 +34,7 @@ import com.coin.app.repository.UserRepository;
 import com.coin.app.repository.WalletRepository;
 import com.coin.app.util.Utills;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -46,6 +47,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class FormServiceImpl implements FormService
 {
+    @Value("${app.photpCal.directory}")
+    private String photoCalPath;
+
     @Autowired
     private LiveScoreService liveScoreService;
 
@@ -78,7 +82,7 @@ public class FormServiceImpl implements FormService
     {
         FormTemplate formTemplate = formTemplateRepository.findById(formId).orElse(null);
         if (formTemplate == null)
-            return new ResultData(false, "Error in fetching data");
+            return new ResultData(false, "خطا در دریافت اطلاعات");
         ResultData resultData = new ResultData(true, "");
         resultData.addProperty("id", formTemplate.getId());
         resultData.addProperty("status", formTemplate.getStatus().name());
@@ -113,7 +117,7 @@ public class FormServiceImpl implements FormService
     @Override
     public ResultData deleteFormTemplate(Long id)
     {
-        ResultData resultData = new ResultData(false, "There is a problem on deleting form template !");
+        ResultData resultData = new ResultData(false, "خطا در حذف مسابقه");
         if (userService.isAuthenticated(userService.getCurrentUser().getId()))
         {
             FormTemplate formTemplate = formTemplateRepository.findById(id).get();
@@ -134,7 +138,7 @@ public class FormServiceImpl implements FormService
                 }
 
                 resultData.setSuccess(true);
-                resultData.setMessage("Form Template is Deleted !");
+                resultData.setMessage("مسابقه حذف شد");
 
                 formTemplateRepository.delete(formTemplate);
             }
@@ -144,7 +148,7 @@ public class FormServiceImpl implements FormService
 
     public ResultData deleteUserForm(Long formId)
     {
-        ResultData resultData = new ResultData(false, "There is a problem on deleting form !");
+        ResultData resultData = new ResultData(false, "خطا در حذف فرم");
 
         if (userService.isAuthenticated(userService.getCurrentUser().getId()))
         {
@@ -163,7 +167,7 @@ public class FormServiceImpl implements FormService
                 }
                 formRepository.delete(form);
                 resultData.setSuccess(true);
-                resultData.setMessage("Form is deleted !");
+                resultData.setMessage("فرم حذف شد");
                 resultData.addProperty("accountBalance", wallet.getBalance());
             }
         }
@@ -184,13 +188,13 @@ public class FormServiceImpl implements FormService
                 Map data = ((Map) ((LinkedHashMap) matchData).get("properties"));
                 if (data.get("homeWin") == null || data.get("awayWin") == null || data.get("noWin") == null)
                 {
-                    resultData.setMessage("Null in row data");
+                    resultData.setMessage("خطا در انتخاب ها");
                     return resultData;
                 }
 
                 if (!Boolean.valueOf(data.get("homeWin").toString()) && !Boolean.valueOf(data.get("awayWin").toString()) && !Boolean.valueOf(data.get("noWin").toString()))
                 {
-                    resultData.setMessage("Not selected data for all rows");
+                    resultData.setMessage("همه سطرها انتخاب نشده اند");
                     return resultData;
                 }
 
@@ -215,7 +219,7 @@ public class FormServiceImpl implements FormService
                 //Checking account balance
                 if (value > Long.valueOf(account.getWallet().getBalance()))
                 {
-                    resultData.setMessage("Account balance is not enough !");
+                    resultData.setMessage("موجودی حساب کافی نمی باشد");
                     return resultData;
                 }
 
@@ -275,10 +279,10 @@ public class FormServiceImpl implements FormService
             }
 
             resultData.setSuccess(true);
-            resultData.setMessage("Form is submitted !");
+            resultData.setMessage("فرم ثبت شد");
             resultData.addProperty("accountBalance", account.getWallet().getBalance());
         } else
-            resultData.setMessage("User is not allowed to create form !");
+            resultData.setMessage("کاربر اجازه ثبت فرم را ندارد");
         return resultData;
     }
 
@@ -295,13 +299,13 @@ public class FormServiceImpl implements FormService
                 Map data = ((Map) ((LinkedHashMap) matchData).get("properties"));
                 if (data.get("homeWin") == null || data.get("awayWin") == null || data.get("noWin") == null)
                 {
-                    resultData.setMessage("Null in row data");
+                    resultData.setMessage("خطا در انتخاب ها");
                     return resultData;
                 }
 
                 if (!Boolean.valueOf(data.get("homeWin").toString()) && !Boolean.valueOf(data.get("awayWin").toString()) && !Boolean.valueOf(data.get("noWin").toString()))
                 {
-                    resultData.setMessage("Not selected data for all rows");
+                    resultData.setMessage("همه سطرها انتخاب نشده اند");
                     return resultData;
                 }
 
@@ -329,7 +333,7 @@ public class FormServiceImpl implements FormService
                 //Checking account balance
                 if (value > Long.valueOf(account.getWallet().getBalance()))
                 {
-                    resultData.setMessage("Account balance is not enough !");
+                    resultData.setMessage("موجودی حساب کافی نمی باشد");
                     return resultData;
                 }
 
@@ -387,10 +391,10 @@ public class FormServiceImpl implements FormService
             }
 
             resultData.setSuccess(true);
-            resultData.setMessage("Form is submitted !");
+            resultData.setMessage("فرم ثبت شد");
             resultData.addProperty("accountBalance", account.getWallet().getBalance());
         } else
-            resultData.setMessage("User is not allowed to update form !");
+            resultData.setMessage("کاربر اجازه ثبت فرم را ندارد");
         return resultData;
     }
 
@@ -485,8 +489,8 @@ public class FormServiceImpl implements FormService
     public ResultData findUserForms(String type, String filter, String sortOrder, String sortBy, int pageNumber, int pageSize)
     {
         if (!userService.isAuthenticated(null))
-            return new ResultData(false, "User is not authenticated");
-        ResultData resultData = new ResultData(true, type + "Forms returns.");
+            return new ResultData(false, "کاربر تشخیص هویت نشده است");
+        ResultData resultData = new ResultData(true, "");
         List<FormStatus> formStatuses = new ArrayList<>();
         switch (type)
         {
@@ -572,8 +576,8 @@ public class FormServiceImpl implements FormService
                 matchData.addProperty("leagueCountry", Utills.getFarsiName(fixture.getVisitorCountryName()));
             matchData.addProperty("time", Utills.shortDisplayForTime(fixture.getTime()));
             matchData.addProperty("date", Utills.nameDisplayForDate(fixture.getDate(), false));
-            matchData.addProperty("minute", fixture.getMinute() == null ? "00" : fixture.getMinute().length() == 1 ? '0' + fixture.getMinute() : fixture.getMinute());
-//            matchData.addProperty("minute", LocalTime.now().getMinute() < 10 ? '0' + LocalTime.now().getMinute() : LocalTime.now().getMinute());
+//            matchData.addProperty("minute", fixture.getMinute() == null ? "00" : fixture.getMinute().length() == 1 ? '0' + fixture.getMinute() : fixture.getMinute());
+            matchData.addProperty("minute", LocalTime.now().getMinute() < 10 ? '0' + LocalTime.now().getMinute() : LocalTime.now().getMinute());
             matchData.addProperty("status", fixture.getStatus());
             matchResult.add(matchData);
         }
@@ -592,7 +596,7 @@ public class FormServiceImpl implements FormService
         Form form = formRepository.findById(formId).get();
         if (statuses.contains(form.getStatus()))
             return this.findFormData(form);
-        return new ResultData(false, "Illegal access to form data");
+        return new ResultData(false, "دسترسشی نامعتبر به اطلاعات");
     }
 
     private ResultData findFormData(Form form)
@@ -616,40 +620,13 @@ public class FormServiceImpl implements FormService
     {
         FormTemplate formTemplate = formTemplateRepository.findById(formTemplateId).get();
         String fileName = "PhotoCal_" + formTemplate.getType().name() + "_" + formTemplate.getId() + ".pdf";
-        String desttination = "D://coin/photoCal/" + fileName;
+        String desttination = photoCalPath + fileName;
 
         HttpHeaders respHeaders = new HttpHeaders();
         respHeaders.setContentType(MediaType.APPLICATION_PDF);
         respHeaders.add("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
         InputStreamResource isr = new InputStreamResource(new FileInputStream(desttination));
         return new ResponseEntity(isr, respHeaders, HttpStatus.OK);
-    }
-
-    private String escapeNonAscii(String str)
-    {
-        StringBuilder retStr = new StringBuilder();
-        for (int i = 0; i < str.length(); i++)
-        {
-            int cp = Character.codePointAt(str, i);
-            int charCount = Character.charCount(cp);
-            if (charCount > 1)
-            {
-                i += charCount - 1; // 2.
-                if (i >= str.length())
-                {
-                    throw new IllegalArgumentException("truncated unexpectedly");
-                }
-            }
-
-            if (cp < 128)
-            {
-                retStr.appendCodePoint(cp);
-            } else
-            {
-                retStr.append("\\").append(String.format("u0%x", cp));
-            }
-        }
-        return retStr.toString();
     }
 
     @Override

@@ -1,7 +1,6 @@
 package com.coin.app.service;
 
 import java.io.File;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -27,21 +26,25 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.KeyCrypterException;
-import org.bitcoinj.crypto.KeyCrypterScrypt;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
-import org.spongycastle.crypto.params.KeyParameter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class BitCoinJServiceImpl implements BitcoinJService
 {
+    @Value("${app.walletKit.directory}")
+    private String walletPath;
+
+    @Value("${app.walletKit.password}")
+    private String walletPass;
+
     @Autowired
     TransactionService transactionService;
 
@@ -60,10 +63,9 @@ public class BitCoinJServiceImpl implements BitcoinJService
     @Autowired
     UserRepository userRepository;
 
-    //    private static Address forwardingAddress;
-    private static WalletAppKit kit;
+    private static WalletAppKit walletAppKit;
 
-    private NetworkParameters params;
+    private NetworkParameters networkParameters;
 
     @Override
     public void initialize()
@@ -74,20 +76,20 @@ public class BitCoinJServiceImpl implements BitcoinJService
         // - MainNetParams for main bitcoin network
         // - TestNet3Params for test app with a real network
         // - RegTestParams for developing project (Developement)
-        params = TestNet3Params.get();
+        networkParameters = TestNet3Params.get();
         initializeWallet();
     }
 
 
     private void initializeWallet()
     {
-        while (kit == null)
+        while (walletAppKit == null)
         {
-            kit = new WalletAppKit(params, new File("C:\\Wallets\\"), "coinWallet"); //.replaceAll("[^a-zA-Z0-9.-]", "_") + "-" + params.getPaymentProtocolId();
-            kit.startAsync();
-            kit.awaitRunning();
-            if(!kit.wallet().isEncrypted())
-                kit.wallet().encrypt("Qwerty123");
+            walletAppKit = new WalletAppKit(networkParameters, new File(walletPath), "coinWallet");
+            walletAppKit.startAsync();
+            walletAppKit.awaitRunning();
+            if(!walletAppKit.wallet().isEncrypted())
+                walletAppKit.wallet().encrypt(walletPass);
             startCoinReceiveListener();
             System.out.println("////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////");
             System.out.println("////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////");
@@ -119,7 +121,7 @@ public class BitCoinJServiceImpl implements BitcoinJService
     @Override
     public String getNewWalletAddress()
     {
-        return kit.wallet().freshReceiveAddress().toString();
+        return walletAppKit.wallet().freshReceiveAddress().toString();
     }
 
     @Override
@@ -127,7 +129,7 @@ public class BitCoinJServiceImpl implements BitcoinJService
     {
         for (com.coin.app.model.Transaction transaction : transactionRepository.findByStatus(TransactionStatus.UNCONFIRMED))
         {
-            for (Transaction tx : kit.wallet().getTransactionsByTime())
+            for (Transaction tx : walletAppKit.wallet().getTransactionsByTime())
             {
                 if (transaction.getTxId().equals(tx.getHashAsString()))
                 {
@@ -154,15 +156,15 @@ public class BitCoinJServiceImpl implements BitcoinJService
         }
 
         int count = transactionRepository.countByType(TransactionType.DEPOSIT);
-        List<Transaction> transactions = kit.wallet().getTransactionsByTime();
+        List<Transaction> transactions = walletAppKit.wallet().getTransactionsByTime();
         if (transactions.size() != count)
             for (Transaction tx : transactions)
-                saveUserTransaction(kit.wallet(), tx);
+                saveUserTransaction(walletAppKit.wallet(), tx);
     }
 
     private void startCoinReceiveListener()
     {
-        kit.wallet().addCoinsReceivedEventListener(new WalletCoinsReceivedEventListener()
+        walletAppKit.wallet().addCoinsReceivedEventListener(new WalletCoinsReceivedEventListener()
         {
             @Override
             public void onCoinsReceived(Wallet w, Transaction tx, Coin prevBalance, Coin newBalance)
@@ -202,10 +204,10 @@ public class BitCoinJServiceImpl implements BitcoinJService
 
     private void updateAdminRealBalance()
     {
-        User user = userRepository.findByUsername("Admin");
-        if (user != null && user.getRole().equals(UserRole.ROLE_ADMIN))
+        User user = userRepository.findByRole(UserRole.ROLE_ADMIN).get(0);
+        if (user != null)
         {
-            user.getAccount().getWallet().setRealBalance(kit.wallet().getBalance().getValue() + "");
+            user.getAccount().getWallet().setRealBalance(walletAppKit.wallet().getBalance().getValue() + "");
             walletRepository.save(user.getAccount().getWallet());
         }
     }
@@ -218,16 +220,16 @@ public class BitCoinJServiceImpl implements BitcoinJService
         List<TransactionOutput> outputs = tx.getOutputs();
         for (TransactionOutput out : outputs)
         {
-            Address address = out.getAddressFromP2PKHScript(params);
+            Address address = out.getAddressFromP2PKHScript(networkParameters);
             if (address == null)
-                address = out.getAddressFromP2SH(params);
+                address = out.getAddressFromP2SH(networkParameters);
             userWallet = address == null ? null : walletRepository.findByAddress(address.toString());
             if (userWallet != null)
                 break;
         }
 
         if (userWallet == null)
-            userWallet = userRepository.findByUsername("Admin").getAccount().getWallet();
+            userWallet = userRepository.findByRole(UserRole.ROLE_ADMIN).get(0).getAccount().getWallet();
 
         com.coin.app.model.Transaction transaction = new com.coin.app.model.Transaction();
         transaction.setCreatedDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
@@ -252,7 +254,7 @@ public class BitCoinJServiceImpl implements BitcoinJService
                 {
                     transaction.setType(TransactionType.FORWARD);
                     transaction.setDescription("انتقال " + Utills.commaSeparator(String.valueOf(Math.abs(tx.getValue(w).getValue()) - fee)) +  " ساتوشی به آدرس "
-                            + (out.getAddressFromP2PKHScript(params) == null ? out.getAddressFromP2SH(params) : out.getAddressFromP2PKHScript(params))
+                            + (out.getAddressFromP2PKHScript(networkParameters) == null ? out.getAddressFromP2SH(networkParameters) : out.getAddressFromP2PKHScript(networkParameters))
                             + " و " + Math.round((Math.abs(tx.getValue(w).getValue()) - 1000)  * 0.005) + " ساتوشی کارمزد به حساب مدیریت");
                     break;
                 }
@@ -276,17 +278,19 @@ public class BitCoinJServiceImpl implements BitcoinJService
     @Override
     public TransactionStatus forwardCoins(Long amount, String address)
     {
-        Address forwardingAddress = new Address(params, address);
+        Address forwardingAddress = new Address(networkParameters, address);
         try
         {
             SendRequest sendRquest = SendRequest.to(forwardingAddress, Coin.valueOf(amount));
             sendRquest.feePerKb = Coin.ZERO;
-            sendRquest.aesKey = kit.wallet().getKeyCrypter().deriveKey("Qwerty123");
-            Wallet.SendResult sendResult = kit.wallet().sendCoins(kit.peerGroup(), sendRquest);
-            System.out.println("Sending ...");
+            sendRquest.aesKey = walletAppKit.wallet().getKeyCrypter().deriveKey(walletPass);
+            Wallet.SendResult sendResult = walletAppKit.wallet().sendCoins(walletAppKit.peerGroup(), sendRquest);
+            System.out.println("Forwarding " + Utills.commaSeparator(amount.toString()) + " Satoshi to " + address + " ...");
 
             Long fee = sendResult.tx.getFee() == null ? 0L : sendResult.tx.getFee().value;
-            Long value = Math.abs(sendResult.tx.getValue(kit.wallet()).getValue()) - fee;
+            Long value = Math.abs(sendResult.tx.getValue(walletAppKit.wallet()).getValue()) - fee;
+
+            System.out.println(" >>>>>>>>>>>>  Fee: " + fee + "          >>>>>>>>>>> Value: " + value);
 
             // Register a callback that is invoked when the transaction has propagated across the network.
             // This shows a second style of registering ListenableFuture callbacks, it works when you don't
@@ -297,7 +301,7 @@ public class BitCoinJServiceImpl implements BitcoinJService
                 public void run()
                 {
                     //Remove fee from admin balance
-                    com.coin.app.model.Wallet adminWallet = userRepository.findByUsername("Admin").getAccount().getWallet();
+                    com.coin.app.model.Wallet adminWallet = userRepository.findByRole(UserRole.ROLE_ADMIN).get(0).getAccount().getWallet();
                     Long adminBalance = Long.valueOf(adminWallet.getBalance()) - fee;
                     adminWallet.setBalance(adminBalance.toString());
                     walletRepository.save(adminWallet);

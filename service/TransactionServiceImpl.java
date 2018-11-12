@@ -95,10 +95,10 @@ public class TransactionServiceImpl implements TransactionService
         {
             String securityCode = userService.getCurrentUser().getAccount().getDescription();
             if (!userSecurityCode.trim().equals(securityCode.trim()))
-                return new ResultData(false, "Security code is wrong !");
+                return new ResultData(false, "کد امنیتی صحیح نمی باشد");
 
             if (Long.valueOf(amountValue) < 20000)
-                return new ResultData(false, "Amount is under 20000 !");
+                return new ResultData(false, "مبلغ کمتر از حد مجاز می باشد");
 
             Wallet wallet = userService.getCurrentUser().getAccount().getWallet();
             Long amount = Long.valueOf(amountValue);
@@ -106,7 +106,7 @@ public class TransactionServiceImpl implements TransactionService
             Long fee = 1000 + Math.round(amount * 0.005);
 
             if (amount > balance - fee)
-                return new ResultData(false, "Amount is out of balance !");
+                return new ResultData(false, "مبلغ بیشتر از حد مجاز می باشد");
 
             TransactionStatus status = TransactionStatus.CONFIRMED;
             Wallet destinationWallet = walletRepository.findByAddress(address);
@@ -165,8 +165,8 @@ public class TransactionServiceImpl implements TransactionService
                 resultData.addProperty("balance", wallet.getBalance());
                 return resultData;
             }
-            return new ResultData(false, "Transfering Problem !!");
+            return new ResultData(false, "اشکال در ارسال");
         }
-        return new ResultData(false, "Authentication Problem !!");
+        return new ResultData(false, "اشکال در تشخیص هویت");
     }
 }

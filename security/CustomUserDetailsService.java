@@ -19,12 +19,6 @@ public class CustomUserDetailsService implements UserDetailsService
     @Transactional
     public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException
     {
-        // Let people login with either username or email
-//        User user = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail)
-//                .orElseThrow(() ->
-//                        new UsernameNotFoundException("User not found with username or email : " + usernameOrEmail)
-//                );
-
         User user = userRepository.findByEmail(usernameOrEmail);
         return UserPrincipal.create(user);
     }
@@ -33,7 +27,7 @@ public class CustomUserDetailsService implements UserDetailsService
     @Transactional
     public UserDetails loadUserById(Long id)
     {
-        User user = userRepository.findById(id).orElseThrow( () -> new UsernameNotFoundException("User not found with id : " + id));
+        User user = userRepository.findById(id).orElseThrow( () -> new UsernameNotFoundException("کاربر مورد نظر پیدا نشد. "));
         return UserPrincipal.create(user);
     }
 }

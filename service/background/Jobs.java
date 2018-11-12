@@ -2,7 +2,6 @@ package com.coin.app.service.background;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -21,6 +20,7 @@ import com.coin.app.model.enums.FormTemplateStatus;
 import com.coin.app.model.enums.FormTemplateType;
 import com.coin.app.model.enums.TransactionStatus;
 import com.coin.app.model.enums.TransactionType;
+import com.coin.app.model.enums.UserRole;
 import com.coin.app.model.enums.WinnerPlace;
 import com.coin.app.model.livescore.Fixture;
 import com.coin.app.model.livescore.Form;
@@ -54,12 +54,15 @@ import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 import com.itextpdf.text.pdf.draw.LineSeparator;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class Jobs extends TimerTask
 {
+    @Value("${app.photpCal.directory}")
+    private String photoCalDir;
+
     @Autowired
     private LiveScoreService liveScoreService;
 
@@ -118,7 +121,7 @@ public class Jobs extends TimerTask
 
         formTemplateStatuses.add(FormTemplateStatus.CLOSE);
         for (FormTemplate formTemplate : formTemplateRepository.findAllByStatusIsInOrderByCreatedDateAsc(formTemplateStatuses))
-            if(!photoCalExist(formTemplate))
+            if (!photoCalExist(formTemplate))
                 try
                 {
                     createPhotoCalPDF(formTemplate.getId());
@@ -234,13 +237,6 @@ public class Jobs extends TimerTask
         System.out.println(" >>>>>>>>  Daily Jobs : Load Fixtures ==> " + LocalDate.now());
         System.out.println("------------------------------------------");
         System.out.println("------------------------------------------\n");
-
-//        liveScoreService.loadFixtureBooks();
-//        System.out.println("\n------------------------------------------");
-//        System.out.println("------------------------------------------");
-//        System.out.println(" >>>>>>>>  Daily Jobs : Load Fixture Books ==> " + LocalDate.now());
-//        System.out.println("------------------------------------------");
-//        System.out.println("------------------------------------------\n");
     }
 
     private void findWinners(FormTemplate formTemplate)
@@ -366,7 +362,7 @@ public class Jobs extends TimerTask
         if (userRepository.findById(id).isPresent() && formRepository.countByAccountAndFormTemplateAndReal(userRepository.findById(id).get().getAccount(), formTemplate, true) > 0)
             user = userRepository.findById(id).get();
         else
-            user = userRepository.findByUsername("Admin");
+            user = userRepository.findByRole(UserRole.ROLE_ADMIN).get(0);
 
         transaction.setAccount(user.getAccount());
         transaction.setUpdateDate(LocalDate.now());
@@ -388,7 +384,7 @@ public class Jobs extends TimerTask
         Long userFee = 20 * winner.getPrize() / 100;
         transaction.setTotalValue(userFee);
         transaction.setType(TransactionType.INCOME);
-        user = userRepository.findByUsername("Admin");
+        user = userRepository.findByRole(UserRole.ROLE_ADMIN).get(0);
         transaction.setAccount(user.getAccount());
         transaction.setUpdateDate(LocalDate.now());
         transaction.setUpdateTime(LocalTime.now());
@@ -403,10 +399,7 @@ public class Jobs extends TimerTask
 
     private boolean photoCalExist(FormTemplate formTemplate)
     {
-        String fileName = "PhotoCal_" + formTemplate.getType().name() + "_" + formTemplate.getId() + ".pdf";
-        String destination = "D://coin/photoCal/" + fileName;
-
-        File f = new File(destination);
+        File f = new File(photoCalDir + "PhotoCal_" + formTemplate.getType().name() + "_" + formTemplate.getId() + ".pdf");
         return f.exists();
     }
 
@@ -416,9 +409,8 @@ public class Jobs extends TimerTask
 
         List<Form> forms = formRepository.findByFormTemplateAndRealOrderByCreatedDateAscCreatedTimeAsc(formTemplate, true);
 
-        String fileName = "PhotoCal_" + formTemplate.getType().name() + "_" + formTemplate.getId() + ".pdf";
-        String destination = "D://coin/photoCal/" + fileName;
-        String fontPath = "C://Users/javad.farzaneh/projects/Examples/coinServer/src/main/resources/font/Vazir.ttf";
+        String fileName = photoCalDir + "PhotoCal_" + formTemplate.getType().name() + "_" + formTemplate.getId() + ".pdf";
+        String fontPath = Utills.propertiesPath + "font/Vazir.ttf";
         Font font = FontFactory.getFont(fontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
         font.setSize(10);
 
@@ -432,7 +424,7 @@ public class Jobs extends TimerTask
 
         /////////////////////////////////////////////////////////////////////////////////
         Document document = new Document();
-        PdfWriter.getInstance(document, new FileOutputStream(destination));
+        PdfWriter.getInstance(document, new FileOutputStream(fileName));
         document.open();
 
         Paragraph p = new Paragraph("", font);
@@ -461,8 +453,8 @@ public class Jobs extends TimerTask
         table.setRunDirection(PdfWriter.RUN_DIRECTION_RTL);
 
         phrase = new Phrase("");
-        chunk1 = new Chunk("تعداد فرم ها: " , font);
-        Chunk chunk2 = new Chunk( String.valueOf(forms.size()) , blueFont);
+        chunk1 = new Chunk("تعداد فرم ها: ", font);
+        Chunk chunk2 = new Chunk(String.valueOf(forms.size()), blueFont);
         phrase.add(chunk1);
         phrase.add(chunk2);
         cell = new PdfPCell(phrase);
@@ -470,8 +462,8 @@ public class Jobs extends TimerTask
         table.addCell(cell);
 
         phrase = new Phrase("");
-        chunk1 = new Chunk("مبلغ جایزه: " , font);
-        chunk2 = new Chunk( Utills.commaSeparator(formTemplate.getTotalValue().toString()) + " ساتوشی" , blueFont);
+        chunk1 = new Chunk("مبلغ جایزه: ", font);
+        chunk2 = new Chunk(Utills.commaSeparator(formTemplate.getTotalValue().toString()) + " ساتوشی", blueFont);
         phrase.add(chunk1);
         phrase.add(chunk2);
         cell = new PdfPCell(phrase);
@@ -667,11 +659,11 @@ public class Jobs extends TimerTask
                     matchTable.addCell(cell);
 
 
-                    Image checked_1 = Image.getInstance("C:\\Users\\javad.farzaneh\\projects\\Examples\\coinServer\\src\\main\\resources\\image\\checked_1.png");
-                    Image unchecked_1 = Image.getInstance("C:\\Users\\javad.farzaneh\\projects\\Examples\\coinServer\\src\\main\\resources\\image\\unchecked_1.png");
+                    Image checked_1 = Image.getInstance(Utills.propertiesPath + "image\\checked_1.png");
+                    Image unchecked_1 = Image.getInstance(Utills.propertiesPath + "image\\unchecked_1.png");
 
-                    Image checked_2 = Image.getInstance("C:\\Users\\javad.farzaneh\\projects\\Examples\\coinServer\\src\\main\\resources\\image\\checked_2.png");
-                    Image unchecked_2 = Image.getInstance("C:\\Users\\javad.farzaneh\\projects\\Examples\\coinServer\\src\\main\\resources\\image\\unchecked_2.png");
+                    Image checked_2 = Image.getInstance(Utills.propertiesPath + "image\\checked_2.png");
+                    Image unchecked_2 = Image.getInstance(Utills.propertiesPath + "image\\unchecked_2.png");
 
                     // Local Win
                     cell = new PdfPCell(match.isLocalWin() ? (count % 2 == 1 ? checked_1 : checked_2) : (count % 2 == 1 ? unchecked_1 : unchecked_2), true);

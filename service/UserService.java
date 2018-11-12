@@ -18,27 +18,13 @@ public interface UserService
 
     User getCurrentUser();
 
-    User activateUser(User user);
-
-    void save(User user);
-
     ResultData sendInvitations(List<String> emails);
 
     User findByEmail(String email);
 
     User findByUserName(String username);
 
-    List<User> findAllUsers();
-
     User findById(Long id);
 
-    boolean isUserExist(User user);
-
     User saveUser(User user);
-
-    User updateUser(User user);
-
-    void deleteUserById(Long id);
-
-    void deleteAllUsers();
 }

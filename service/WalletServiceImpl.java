@@ -28,10 +28,4 @@ public class WalletServiceImpl implements WalletService
         wallet.setAddress(bitcoinJService.getNewWalletAddress());
         return walletRepository.save(wallet);
     }
-
-    @Override
-    public Wallet update(Wallet wallet)
-    {
-        return walletRepository.save(wallet);
-    }
 }

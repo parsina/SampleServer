@@ -52,6 +52,6 @@ public class AccountServiceImpl implements AccountService
             return data;
         }
 
-        return new ResultData(false, "No permission to get user account data!");
+        return new ResultData(false, "عدم وجود امکان دسترسی به اطلاعات حساب کاربری");
     }
 }

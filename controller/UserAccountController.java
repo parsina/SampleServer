@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/account")
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
+//@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
 public class UserAccountController
 {
     @Autowired
@@ -37,7 +37,7 @@ public class UserAccountController
     }
 
     @Secured({"ROLE_ADMIN", "ROLE_USER"})
-    @GetMapping("/accountTransactionsSize")
+    @PostMapping("/accountTransactionsSize")
     public Long userAccountTransactionsSize()
     {
         return transactionService.countUserAccountTransactions();

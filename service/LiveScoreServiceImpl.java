@@ -54,8 +54,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
     @Autowired
     private BookDataRepository bookDataRepository;
 
-    Properties props = new Properties();
-    String path = Thread.currentThread().getContextClassLoader().getResource("").getPath();
+    private Properties props = new Properties();
 
     @Async
     @Override
@@ -228,7 +227,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
         List<ResultData> countriesData = new ArrayList<>();
         try
         {
-            InputStream in = new FileInputStream(path + "country.properties");
+            InputStream in = new FileInputStream(Utills.propertiesPath + "country.properties");
             props.load(in);
 
             List<String> countries = new ArrayList<>();
@@ -267,11 +266,11 @@ public class LiveScoreServiceImpl implements LiveScoreService
     {
         try
         {
-            InputStream in = new FileInputStream(path + "country.properties");
+            InputStream in = new FileInputStream(Utills.propertiesPath + "country.properties");
             props.load(in);
             in.close();
 
-            FileOutputStream out = new FileOutputStream(path + "country.properties");
+            FileOutputStream out = new FileOutputStream(Utills.propertiesPath + "country.properties");
             props.setProperty(key,value);
             props.store(out, null);
             out.close();
@@ -288,7 +287,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
         List<ResultData> leaguesData = new ArrayList<>();
         try
         {
-            InputStream in = new FileInputStream(path + "league.properties");
+            InputStream in = new FileInputStream(Utills.propertiesPath + "league.properties");
             props.load(in);
 
             List<String> leagues = new ArrayList<>();
@@ -324,11 +323,11 @@ public class LiveScoreServiceImpl implements LiveScoreService
     {
         try
         {
-            InputStream in = new FileInputStream(path + "league.properties");
+            InputStream in = new FileInputStream(Utills.propertiesPath + "league.properties");
             props.load(in);
             in.close();
 
-            FileOutputStream out = new FileOutputStream(path + "league.properties");
+            FileOutputStream out = new FileOutputStream(Utills.propertiesPath + "league.properties");
             props.setProperty(key,value);
             props.store(out, null);
             out.close();
@@ -345,7 +344,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
         List<ResultData> teamsData = new ArrayList<>();
         try
         {
-            InputStream in = new FileInputStream(path + "team.properties");
+            InputStream in = new FileInputStream(Utills.propertiesPath + "team.properties");
             props.load(in);
 
             List<String> teams = new ArrayList<>();
@@ -384,11 +383,11 @@ public class LiveScoreServiceImpl implements LiveScoreService
     {
         try
         {
-            InputStream in = new FileInputStream(path + "team.properties");
+            InputStream in = new FileInputStream(Utills.propertiesPath + "team.properties");
             props.load(in);
             in.close();
 
-            FileOutputStream out = new FileOutputStream(path + "team.properties");
+            FileOutputStream out = new FileOutputStream(Utills.propertiesPath + "team.properties");
             props.setProperty(key,value);
             props.store(out, null);
             out.close();

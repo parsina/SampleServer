@@ -9,6 +9,7 @@ import com.coin.app.repository.AccountRepository;
 import com.coin.app.service.AccountService;
 import com.coin.app.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -19,6 +20,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class EmailServiceImpl implements EmailService
 {
+    @Value("${app.url}")
+    private String appUrl;
+
     @Autowired
     private JavaMailSender sender;
 
@@ -43,7 +47,7 @@ public class EmailServiceImpl implements EmailService
         userService.saveUser(user);
 
         String message = "لطفا جهت تایید ایمیل و فعال سازی حساب خود بر روی لینک زیر کلیک نمایید: " ;
-        String link = "http://localhost:4200/confirmRegistration?token=" + user.getConfirmationToken();
+        String link = appUrl + "confirmRegistration?token=" + user.getConfirmationToken();
 
         MimeMessagePreparator messagePreparator = mimeMessage ->
         {
@@ -70,14 +74,13 @@ public class EmailServiceImpl implements EmailService
     public void sendInvitationEmail(String email)
     {
         String message = "شما به شرکت در مسابقات پیش بینی فوتبال دعوت شده اید. لطفا جهت شرکت در مسابقات روی لینک زیر کلیک نمایید. " ;
-        String link = "http://localhost:4200/";
 
         MimeMessagePreparator messagePreparator = mimeMessage ->
         {
             MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
             messageHelper.setTo(email);
             messageHelper.setSubject("ثبت نام");
-            String content = mailContentBuilderService.build(message, link, "invitation");
+            String content = mailContentBuilderService.build(message, appUrl, "invitation");
             messageHelper.setText(content, true);
         };
         try

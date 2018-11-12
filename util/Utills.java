@@ -17,40 +17,10 @@ import ir.huri.jcal.JalaliCalendar;
 
 public class Utills
 {
-//    @Value("${app.photpCal.directory}")
-//    private String propertiesPath;
-
     private static Properties countryProps = new Properties();
     private static Properties leagueProps = new Properties();
     private static Properties teamProps = new Properties();
-    private static String propertiesPath = Thread.currentThread().getContextClassLoader().getResource("").getPath();
-
-
-    public static String toFakePrice(String price, boolean bid)
-    {
-        int suffix = price.split("\\.")[1].length();
-        double amount = Double.parseDouble(price);
-        StringBuilder pattern = new StringBuilder("#,###.");
-
-        for (int i = 0; i < suffix; i++)
-        {
-            amount = amount * 10;
-            pattern.append("#");
-        }
-
-        if (bid)
-            amount = amount - (0.01 * amount);
-        else
-            amount = amount + (0.01 * amount);
-        amount = Math.round(amount);
-
-        for (int i = 0; i < suffix; i++)
-            amount = amount / 10;
-
-        DecimalFormat formatter = new DecimalFormat(pattern.toString());
-
-        return formatter.format(amount);
-    }
+    public static String propertiesPath = Thread.currentThread().getContextClassLoader().getResource("").getPath();
 
     public static String commaSeparator(String value)
     {
@@ -75,14 +45,6 @@ public class Utills
     public static String shortDisplayForTime(String time)
     {
         return time.split(":")[0] + ":" + time.split(":")[1];
-    }
-
-    public static String addLeadingZeros(int count, long num, boolean split)
-    {
-        String str = String.format("%0" + (count + 1) + "d", num);
-        String part1 = str.substring(0, (count + 1) / 2);
-        String part2 = str.substring((count + 1) / 2, str.length());
-        return part2 + (split ? "-" : "") + part1;
     }
 
     public static String getFarsiName(String key)

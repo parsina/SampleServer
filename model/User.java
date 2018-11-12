@@ -1,8 +1,6 @@
 package com.coin.app.model;
 
-import java.util.Collection;
 import java.util.Date;
-import java.util.List;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
@@ -12,25 +10,18 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
-import com.coin.app.model.auth.Authority;
 import com.coin.app.model.enums.UserRole;
 import com.coin.app.model.enums.UserStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.Setter;
 import lombok.ToString;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 
 @Entity
 @Getter
@@ -69,13 +60,6 @@ public class User
 
     @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private UserInfo userInfo;
-
-
-    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    @JoinTable(name = "user_authority",
-            joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
-            inverseJoinColumns = @JoinColumn(name = "authority_id", referencedColumnName = "id"))
-    private List<Authority> authorities;
 
     public User()
     {

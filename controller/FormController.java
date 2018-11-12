@@ -19,6 +19,7 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.annotation.Secured;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,7 +30,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/form")
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
 public class FormController
 {
     @Autowired
@@ -38,18 +38,15 @@ public class FormController
     @Autowired
     private FormService formService;
 
-    @Autowired
-    private UserRepository userRepository;
-
     @Secured("ROLE_ADMIN")
-    @GetMapping("/loadFixturesData")
+    @PostMapping("/loadFixturesData")
     public void loadFixturesData()
     {
         liveScoreService.loadFixtures();
     }
 
     @Secured("ROLE_ADMIN")
-    @GetMapping("/fixtureData")
+    @PostMapping("/fixtureData")
     public List<ResultData> freeFixtureData()
     {
         return liveScoreService.findAllFreeFixtures();
@@ -76,7 +73,7 @@ public class FormController
         return formService.deleteUserForm(Long.valueOf(input.get("formId").toString()));
     }
 
-    @GetMapping("/formTemplates")
+    @PostMapping("/formTemplates")
     public List<ResultData> formTemplates()
     {
         List<FormTemplateStatus> statuses = new ArrayList<>();
@@ -85,10 +82,10 @@ public class FormController
         return formService.findFormTemplatesByStatus(statuses);
     }
 
-    @GetMapping("/formTemplateData")
-    public ResultData formTemplateData(Long id)
+    @PostMapping("/formTemplateData")
+    public ResultData formTemplateData(@RequestBody Map<String, Long> input)
     {
-        return formService.findFormTemplate(id);
+        return formService.findFormTemplate(input.get("id"));
     }
 
     @GetMapping("/updateFormTemplate")
@@ -108,12 +105,12 @@ public class FormController
     }
 
 
-    @GetMapping("/totalPassedFromTemplates")
-    public Long totalPassedFromTemplates(String challengeType)
+    @PostMapping("/totalPassedFromTemplates")
+    public Long totalPassedFromTemplates(@RequestBody Map<String, String> input)
     {
         List<FormTemplateStatus> statuses = new ArrayList<>();
         statuses.add(FormTemplateStatus.PASSED);
-        return formService.getFormTemplatesCount(statuses, challengeType);
+        return formService.getFormTemplatesCount(statuses, input.get("challengeType"));
     }
 
     @GetMapping("/downloadPhotoCal")
@@ -131,10 +128,10 @@ public class FormController
         return formService.findFormTemplatesByStatus(statuses, input.get("challengeType"), input.get("filter"), input.get("sortOrder"), input.get("sortBy"), Integer.valueOf(input.get("pageNumber")), Integer.valueOf(input.get("pageSize")));
     }
 
-    @GetMapping("/formListSize")
-    public Long templateFormsSize(Long formTemplateId)
+    @PostMapping("/formListSize")
+    public Long templateFormsSize(@RequestBody Map<String, Long> input)
     {
-        return formService.countFormList(formTemplateId);
+        return formService.countFormList(input.get("formTemplateId"));
     }
 
     @PostMapping("/formList")
@@ -144,7 +141,7 @@ public class FormController
     }
 
     @Secured({"ROLE_ADMIN", "ROLE_USER"})
-    @GetMapping("/openFormTemplates")
+    @PostMapping("/openFormTemplates")
     public List<ResultData> openFormTemplates()
     {
         List<FormTemplateStatus> statuses = new ArrayList<>();
@@ -187,10 +184,10 @@ public class FormController
     }
 
     @Secured({"ROLE_ADMIN", "ROLE_USER"})
-    @GetMapping("/userFormsCount")
-    public Long userFormsCount(String formType)
+    @PostMapping("/userFormsCount")
+    public Long userFormsCount(@RequestBody Map<String, String> input)
     {
-        return formService.getUserFormsSize(formType);
+        return formService.getUserFormsSize(input.get("formType"));
     }
 
     @Secured({"ROLE_ADMIN", "ROLE_USER"})

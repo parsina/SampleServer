@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/confirm")
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
 public class ConfirmationController
 {
     @Autowired
@@ -33,7 +32,7 @@ public class ConfirmationController
     }
 
     @Secured({"ROLE_ADMIN"})
-    @GetMapping("/countries")
+    @PostMapping("/countries")
     public List<ResultData> countries()
     {
         return liveScoreService.getCountries(false);
@@ -47,7 +46,7 @@ public class ConfirmationController
     }
 
     @Secured({"ROLE_ADMIN"})
-    @GetMapping("/leagues")
+    @PostMapping("/leagues")
     public List<ResultData> leagues()
     {
         return liveScoreService.getLeagues(false);
@@ -61,7 +60,7 @@ public class ConfirmationController
     }
 
     @Secured({"ROLE_ADMIN"})
-    @GetMapping("/teams")
+    @PostMapping("/teams")
     public List<ResultData> teams()
     {
         return liveScoreService.getTeams(false);

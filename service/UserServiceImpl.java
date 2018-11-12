@@ -57,11 +57,11 @@ public class UserServiceImpl implements UserService
         boolean passwordMatched = password.equals(repeatedPassword);
 
         if (!emailIsValid)
-            result.setMessage("Email Invalid");
+            result.setMessage("ایمیل صحیح نمی باشد");
         else if (!passworIsValid)
-            result.setMessage("Password Invalid");
+            result.setMessage("پسوورد صحیح نمی باشد");
         if (!passwordMatched)
-            result.setMessage("Password not matched");
+            result.setMessage("پسوورد و تکرار آن یکسان نمی باشد");
 
         if (emailIsValid && passworIsValid && passwordMatched)
         {
@@ -69,7 +69,7 @@ public class UserServiceImpl implements UserService
             if (user != null)
             {
                 result.setSuccess(false);
-                result.setMessage("User Exist !");
+                result.setMessage("این کاربر قبلا ثبت نام کرده");
                 return result;
             }
 
@@ -77,7 +77,7 @@ public class UserServiceImpl implements UserService
             if (user != null && !user.getStatus().equals(UserStatus.INVITED))
             {
                 result.setSuccess(false); // Should be removed
-                result.setMessage("User Exist !");
+                result.setMessage("این کاربر قبلا ثبت نام کرده");
                 result.addProperty("userEmail", user.getEmail()); // Should be removed
                 return result;
             } else if (user != null && user.getStatus().equals(UserStatus.INVITED))
@@ -89,7 +89,7 @@ public class UserServiceImpl implements UserService
                 user.setConfirmationToken(UUID.randomUUID().toString());
                 userRepository.save(user);
                 result.setSuccess(true);
-                result.setMessage("Invited User Created !");
+                result.setMessage("");
                 result.addProperty("userEmail", user.getEmail());
             } else
             {
@@ -104,7 +104,7 @@ public class UserServiceImpl implements UserService
                 user.setConfirmationToken(UUID.randomUUID().toString());
                 userRepository.save(user);
                 result.setSuccess(true);
-                result.setMessage("New User Created !");
+                result.setMessage("");
                 result.addProperty("userEmail", user.getEmail());
             }
         }
@@ -120,7 +120,7 @@ public class UserServiceImpl implements UserService
         {
             if (user.getStatus().equals(UserStatus.ACTIVE))
             {
-                result.setMessage("User is enabled before");
+                result.setMessage("این حساب کاربری قبلا فعال شده");
                 return result;
             }
             while (user.getAccount() == null)
@@ -129,7 +129,7 @@ public class UserServiceImpl implements UserService
             user.getAccount().setStatus(AccountStatus.ACTIVE);
             userRepository.save(user);
             result.setSuccess(true);
-            result.setMessage("User activation is finished");
+            result.setMessage("");
             result.addProperty("id", user.getId());
             result.addProperty("username", user.getUsername());
             result.addProperty("email", user.getEmail());
@@ -146,19 +146,19 @@ public class UserServiceImpl implements UserService
             user = userRepository.findByEmail(username);
         if (user == null)
         {
-            result.setMessage("Username/Email is incorrect !");
+            result.setMessage("ایمیل صحیح نمی باشد");
             return result;
         } else if (user.getStatus().equals(UserStatus.INACTIVE) || user.getStatus().equals(UserStatus.INVITED))
         {
-            result.setMessage("User is not Active");
+            result.setMessage("حساب کاربری غیر فعال است");
             return result;
         } else if (user.getStatus().equals(UserStatus.DELETED))
         {
-            result.setMessage("User is Deleted");
+            result.setMessage("کاربر خذف شده");
             return result;
         } else if (!passwordEncoder.matches(password, user.getPassword()))
         {
-            result.setMessage("Password is incorrect !");
+            result.setMessage("کلمه عبور صحیح نمی باشد");
             return result;
         } else if(user.getStatus().equals(UserStatus.ACTIVE))
         {
@@ -197,19 +197,6 @@ public class UserServiceImpl implements UserService
     {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth.isAuthenticated() ? userRepository.findById(((UserPrincipal) auth.getPrincipal()).getId()).get() : null;
-    }
-
-    @Override
-    public User activateUser(User user)
-    {
-        user.setStatus(UserStatus.ACTIVE);
-        return userRepository.save(user);
-    }
-
-    @Override
-    public void save(User user)
-    {
-        userRepository.save(user);
     }
 
     @Override
@@ -266,44 +253,14 @@ public class UserServiceImpl implements UserService
     }
 
     @Override
-    public List<User> findAllUsers()
-    {
-        return userRepository.findAll();
-    }
-
-    @Override
     public User findById(Long id)
     {
         return userRepository.findById(id).get();
     }
 
     @Override
-    public boolean isUserExist(User user)
-    {
-        return userRepository.existsById(user.getId());
-    }
-
-    @Override
     public User saveUser(User user)
     {
         return userRepository.save(user);
-    }
-
-    @Override
-    public User updateUser(User user)
-    {
-        return userRepository.save(user);
-    }
-
-    @Override
-    public void deleteUserById(Long id)
-    {
-        userRepository.deleteById(id);
-    }
-
-    @Override
-    public void deleteAllUsers()
-    {
-        userRepository.deleteAll();
     }
 }

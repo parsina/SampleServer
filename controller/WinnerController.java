@@ -14,16 +14,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/winner")
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
 public class WinnerController
 {
     @Autowired
     private WinnerService winnerService;
 
-    @GetMapping("/winnerListSize")
-    public Long winnerListSize(Long formTemplateId)
+    @PostMapping("/winnerListSize")
+    public Long winnerListSize(@RequestBody Map<String, Long> input)
     {
-        return winnerService.countWinnerList(formTemplateId);
+        return winnerService.countWinnerList(input.get("formTemplateId"));
     }
 
     @PostMapping("/winnerList")

@@ -23,7 +23,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
 public class UserController
 {
     @Autowired
@@ -68,31 +67,5 @@ public class UserController
     public ResultData sendInvitationEmails(@RequestBody Map<String, List<String>> input)
     {
         return userService.sendInvitations(input.get("emails"));
-    }
-
-    @GetMapping(path = {"/{id}"})
-    public User findOne(@PathVariable("id") Long id)
-    {
-        return userService.findById(id);
-    }
-
-    @PutMapping
-    public User update(@RequestBody User user)
-    {
-//        return userService.update(user);
-        return userService.findById(user.getId());
-    }
-
-    @DeleteMapping(path = {"/{id}"})
-    public User delete(@PathVariable("id") Long id)
-    {
-//        return userService.delete(id);
-        return userService.findById(id);
-    }
-
-    @GetMapping
-    public List findAll()
-    {
-        return userService.findAllUsers();
     }
 }

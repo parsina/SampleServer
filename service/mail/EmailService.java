@@ -9,4 +9,6 @@ public interface EmailService
     void sendInvitationEmail(String email);
 
     ResultData sendWithdrawalCode(String userId);
+
+    void sendNewPassword(String email, String password);
 }

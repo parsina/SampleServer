@@ -27,4 +27,10 @@ public interface UserService
     User findById(Long id);
 
     User saveUser(User user);
+
+    boolean checkLoggedInUser(String email, String password);
+
+    ResultData changeUserPassword(String password);
+
+    ResultData forgotPassword(String email);
 }

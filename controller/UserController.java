@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/auth")
+//@CrossOrigin(origins = {"http://localhost:8080"}, maxAge = 4800, allowCredentials = "false")
 public class UserController
 {
     @Autowired
@@ -68,4 +69,25 @@ public class UserController
     {
         return userService.sendInvitations(input.get("emails"));
     }
+
+    @PostMapping("/checkLoggedInUser")
+    @Secured({"ROLE_ADMIN", "ROLE_USER"})
+    public boolean checkLoggedInUser(@RequestBody Map<String, String> input)
+    {
+        return userService.checkLoggedInUser(input.get("email"), input.get("password"));
+    }
+
+    @PostMapping("/changeUserPassword")
+    @Secured({"ROLE_ADMIN", "ROLE_USER"})
+    public ResultData changeUserPassword(@RequestBody Map<String, String> input)
+    {
+        return userService.changeUserPassword(input.get("password"));
+    }
+
+    @PostMapping("/forgotPassword")
+    public ResultData forgotPassword(@RequestBody Map<String, String> input)
+    {
+        return userService.forgotPassword(input.get("email"));
+    }
+
 }

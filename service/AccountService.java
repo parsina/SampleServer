@@ -10,4 +10,6 @@ public interface AccountService
     Account createAccount(User user);
 
     ResultData getUserAccount();
+
+    ResultData saveSupportTicket(String subject, String description);
 }

@@ -160,7 +160,7 @@ public class UserServiceImpl implements UserService
         {
             result.setMessage("کلمه عبور صحیح نمی باشد");
             return result;
-        } else if(user.getStatus().equals(UserStatus.ACTIVE))
+        } else if (user.getStatus().equals(UserStatus.ACTIVE))
         {
             Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getEmail(), password));
             SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -224,11 +224,9 @@ public class UserServiceImpl implements UserService
                     userRepository.save(user);
                     emailService.sendInvitationEmail(email);
                     validEmails.add(email);
-                }
-                else
+                } else
                     existEmails.add(email);
-            }
-            else
+            } else
                 wrongEmails.add(email);
         }
 
@@ -262,5 +260,44 @@ public class UserServiceImpl implements UserService
     public User saveUser(User user)
     {
         return userRepository.save(user);
+    }
+
+    @Override
+    public boolean checkLoggedInUser(String email, String password)
+    {
+        return passwordEncoder.matches(password, userRepository.findByEmail(email).getPassword());
+    }
+
+    @Override
+    public ResultData changeUserPassword(String password)
+    {
+        if (!Validator.isValidPassword(password))
+            return new ResultData(false, "putNewPassErr");
+        User user = getCurrentUser();
+        if(passwordEncoder.matches(password, user.getPassword()))
+            return new ResultData(false, "equalNewOld");
+
+        user.setPassword(passwordEncoder.encode(password));
+        userRepository.save(user);
+        return new ResultData(true, "");
+    }
+
+    @Override
+    public ResultData forgotPassword(String email)
+    {
+        User user = userRepository.findByEmail(email);
+        if(user == null)
+            return new ResultData(false, "ایمیل وارد شده صحیح نمی باشد و یا در سیستم ثبت نشده است. لطفا ایمیل وارد شده را مجددا بررسی نمایید.");
+        else
+        {
+            String[] passwordArray = UUID.randomUUID().toString().split("-");
+            String password = "";
+            for(int i = 0; i < passwordArray.length; i++)
+                password = password.concat(i%2 == 0 ? passwordArray[i].toUpperCase() : passwordArray[i]);
+            user.setPassword(passwordEncoder.encode(password));
+            userRepository.save(user);
+            emailService.sendNewPassword(user.getEmail(), password);
+            return new ResultData(true, "");
+        }
     }
 }

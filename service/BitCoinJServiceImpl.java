@@ -90,7 +90,6 @@ public class BitCoinJServiceImpl implements BitcoinJService
             walletAppKit.awaitRunning();
             if(!walletAppKit.wallet().isEncrypted())
                 walletAppKit.wallet().encrypt(walletPass);
-            startCoinReceiveListener();
             System.out.println("////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////");
             System.out.println("////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////");
             System.out.println("////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////");
@@ -124,84 +123,6 @@ public class BitCoinJServiceImpl implements BitcoinJService
         return walletAppKit.wallet().freshReceiveAddress().toString();
     }
 
-    @Override
-    public void updateWalletJob()
-    {
-        for (com.coin.app.model.Transaction transaction : transactionRepository.findByStatus(TransactionStatus.UNCONFIRMED))
-        {
-            for (Transaction tx : walletAppKit.wallet().getTransactionsByTime())
-            {
-                if (transaction.getTxId().equals(tx.getHashAsString()))
-                {
-                    transaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
-                    transaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
-                    if (transaction.getType().equals(TransactionType.DEPOSIT))
-                        transaction.setDescription("در انتظار تایید واریز ...");
-                    else if (transaction.getType().equals(TransactionType.WITHDRAWAL))
-                        transaction.setDescription("در انتظار تایید برداشت ...");
-                    if (!tx.isPending())
-                    {
-                        if (transaction.getType().equals(TransactionType.DEPOSIT))
-                            transaction.setDescription("واریز " + Utills.commaSeparator(String.valueOf(Math.abs(transaction.getTotalValue()))) + " ساتوشی به حساب شما");
-                        else if (transaction.getType().equals(TransactionType.WITHDRAWAL))
-                            transaction.setDescription("برداشت " + Utills.commaSeparator(String.valueOf(Math.abs(transaction.getTotalValue()))) + " ساتوشی از حساب شما");
-
-                        transaction.setStatus(TransactionStatus.CONFIRMED);
-                        updateUserWallet(transaction);
-                        updateAdminRealBalance();
-                    }
-                    transactionRepository.save(transaction);
-                }
-            }
-        }
-
-        int count = transactionRepository.countByType(TransactionType.DEPOSIT);
-        List<Transaction> transactions = walletAppKit.wallet().getTransactionsByTime();
-        if (transactions.size() != count)
-            for (Transaction tx : transactions)
-                saveUserTransaction(walletAppKit.wallet(), tx);
-    }
-
-    private void startCoinReceiveListener()
-    {
-        walletAppKit.wallet().addCoinsReceivedEventListener(new WalletCoinsReceivedEventListener()
-        {
-            @Override
-            public void onCoinsReceived(Wallet w, Transaction tx, Coin prevBalance, Coin newBalance)
-            {
-                if (tx.getPurpose().equals(Transaction.Purpose.USER_PAYMENT))
-                    return;
-                System.out.println("Received tx for " + tx.getValueSentToMe(w).toFriendlyString() + ": " + tx);
-                com.coin.app.model.Transaction transaction = saveUserTransaction(w, tx);
-
-                // Wait until it's made it into the block chain (may run immediately if it's already there).
-                Futures.addCallback(tx.getConfidence().getDepthFuture(1), new FutureCallback<TransactionConfidence>()
-                {
-                    @Override
-                    public void onSuccess(TransactionConfidence result)
-                    {
-                        System.out.println("Confirmation received.");
-                    }
-
-                    @Override
-                    public void onFailure(Throwable t)
-                    {
-                        if (transaction != null && transaction.getStatus().equals(TransactionStatus.UNCONFIRMED))
-                        {
-                            transaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
-                            transaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
-                            transaction.setDescription(" عدم تایید واریز " + Utills.commaSeparator(String.valueOf(Math.abs(transaction.getTotalValue()))) + " ساتوشی به حساب شما");
-                            transaction.setStatus(TransactionStatus.FAILED);
-                            transactionRepository.save(transaction);
-                            System.out.println("Confirmation Failure.");
-                        }
-                        throw new RuntimeException(t);
-                    }
-                });
-            }
-        });
-    }
-
     private void updateAdminRealBalance()
     {
         User user = userRepository.findByRole(UserRole.ROLE_ADMIN).get(0);
@@ -209,69 +130,6 @@ public class BitCoinJServiceImpl implements BitcoinJService
         {
             user.getAccount().getWallet().setRealBalance(walletAppKit.wallet().getBalance().getValue() + "");
             walletRepository.save(user.getAccount().getWallet());
-        }
-    }
-
-    private com.coin.app.model.Transaction saveUserTransaction(Wallet w, Transaction tx)
-    {
-        if (transactionRepository.findByTxId(tx.getHashAsString()) != null)
-            return transactionRepository.findByTxId(tx.getHashAsString());
-        com.coin.app.model.Wallet userWallet = null;
-        List<TransactionOutput> outputs = tx.getOutputs();
-        for (TransactionOutput out : outputs)
-        {
-            Address address = out.getAddressFromP2PKHScript(networkParameters);
-            if (address == null)
-                address = out.getAddressFromP2SH(networkParameters);
-            userWallet = address == null ? null : walletRepository.findByAddress(address.toString());
-            if (userWallet != null)
-                break;
-        }
-
-        if (userWallet == null)
-            userWallet = userRepository.findByRole(UserRole.ROLE_ADMIN).get(0).getAccount().getWallet();
-
-        com.coin.app.model.Transaction transaction = new com.coin.app.model.Transaction();
-        transaction.setCreatedDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
-        transaction.setCreatedTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
-        transaction.setUpdateDate(LocalDate.now(ZoneId.of("Asia/Tehran")));
-        transaction.setUpdateTime(LocalTime.now(ZoneId.of("Asia/Tehran")));
-        transaction.setTxId(tx.getHashAsString());
-        transaction.setStatus(TransactionStatus.UNCONFIRMED);
-        if( tx.getValue(w).getValue() > 0 )
-        {
-            transaction.setTotalValue(tx.getValue(w).getValue());
-            transaction.setType(TransactionType.DEPOSIT);
-            transaction.setDescription("در انتظار تایید واریز ...");
-        }
-        else
-        {
-            transaction.setFee(tx.getFee() == null ? null : tx.getFee().getValue() + "");
-            long fee = tx.getFee() == null ? 0 : tx.getFee().getValue();
-            transaction.setTotalValue(Math.abs(tx.getValue(w).getValue()) - fee);
-            for(TransactionOutput out : outputs)
-                if(Math.abs(tx.getValue(w).getValue()) - tx.getFee().getValue() == out.getValue().getValue())
-                {
-                    transaction.setType(TransactionType.FORWARD);
-                    transaction.setDescription("انتقال " + Utills.commaSeparator(String.valueOf(Math.abs(tx.getValue(w).getValue()) - fee)) +  " ساتوشی به آدرس "
-                            + (out.getAddressFromP2PKHScript(networkParameters) == null ? out.getAddressFromP2SH(networkParameters) : out.getAddressFromP2PKHScript(networkParameters))
-                            + " و " + Math.round((Math.abs(tx.getValue(w).getValue()) - 1000)  * 0.005) + " ساتوشی کارمزد به حساب مدیریت");
-                    break;
-                }
-//
-        }
-
-        transaction.setAccount(accountRepository.findByWallet(userWallet));
-        return transactionRepository.save(transaction);
-    }
-
-    private void updateUserWallet(com.coin.app.model.Transaction transaction)
-    {
-        com.coin.app.model.Wallet wallet = transaction.getAccount().getWallet();
-        if (transaction.getType().equals(TransactionType.DEPOSIT))
-        {
-            wallet.setBalance((Long.valueOf(wallet.getBalance()) + transaction.getTotalValue()) + "");
-            walletRepository.save(wallet);
         }
     }
 

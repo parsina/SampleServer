@@ -14,7 +14,5 @@ public interface BitcoinJService
 
     String getNewWalletAddress();
 
-    void updateWalletJob();
-
     TransactionStatus forwardCoins(Long amount, String address);
 }

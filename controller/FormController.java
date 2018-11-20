@@ -30,6 +30,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/form")
+//@CrossOrigin(origins = {"http://localhost:8080"}, maxAge = 4800, allowCredentials = "false")
 public class FormController
 {
     @Autowired
@@ -190,7 +191,6 @@ public class FormController
         return formService.getUserFormsSize(input.get("formType"));
     }
 
-    @Secured({"ROLE_ADMIN", "ROLE_USER"})
     @PostMapping("/getUserFormData")
     public ResultData findUserFormData(@RequestBody Map<String, String> input)
     {

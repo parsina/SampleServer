@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class EmailServiceImpl implements EmailService
 {
-    @Value("${app.url}")
+    @Value("${client.url}")
     private String appUrl;
 
     @Autowired
@@ -47,7 +47,7 @@ public class EmailServiceImpl implements EmailService
         userService.saveUser(user);
 
         String message = "لطفا جهت تایید ایمیل و فعال سازی حساب خود بر روی لینک زیر کلیک نمایید: " ;
-        String link = appUrl + "confirmRegistration?token=" + user.getConfirmationToken();
+        String link = appUrl + "/confirmRegistration?token=" + user.getConfirmationToken();
 
         MimeMessagePreparator messagePreparator = mimeMessage ->
         {
@@ -129,5 +129,28 @@ public class EmailServiceImpl implements EmailService
             }
         }
         else return new ResultData(false, "Authentication problem!");
+    }
+
+    @Override
+    public void sendNewPassword(String email, String password)
+    {
+        String message = "لطفا از کلمه عبور زیر برای ورود به سامانه استفاده نمایید و پس از ورود، در قسمت حساب کاربری آن را تغییر دهید. \n" + password.trim();
+
+        MimeMessagePreparator messagePreparator = mimeMessage ->
+        {
+            MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
+            messageHelper.setTo(email);
+            messageHelper.setSubject("بازیابی کلمه عبور");
+            String content = mailContentBuilderService.build(message, appUrl, "retrievePassword");
+            messageHelper.setText(content, true);
+        };
+        try
+        {
+            sender.send(messagePreparator);
+        } catch (MailException e)
+        {
+            System.out.println(">>>>> Email sending problem!");
+        }
+        System.out.println(">>>>> Invitation email send to : " + email);
     }
 }

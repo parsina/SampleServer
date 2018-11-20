@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/account")
-//@CrossOrigin(origins = "http://localhost:4200", maxAge = 3600)
+//@CrossOrigin(origins = {"http://localhost:8080"}, maxAge = 4800, allowCredentials = "false")
 public class UserAccountController
 {
     @Autowired
@@ -62,6 +62,13 @@ public class UserAccountController
     public ResultData withdrawFromUserAccount(@RequestBody Map<String, String> input)
     {
         return transactionService.transfer(input.get("userId"), input.get("address"), input.get("amount"), input.get("userSecurityCode"));
+    }
+
+    @Secured({"ROLE_ADMIN", "ROLE_USER"})
+    @PostMapping("/sendTicket")
+    public ResultData saveSupportTicket(@RequestBody Map<String, String> input)
+    {
+        return accountService.saveSupportTicket(input.get("subject"), input.get("description"));
     }
 
 }

@@ -47,7 +47,7 @@ public class EmailServiceImpl implements EmailService
         userService.saveUser(user);
 
         String message = "لطفا جهت تایید ایمیل و فعال سازی حساب خود بر روی لینک زیر کلیک نمایید: " ;
-        String link = appUrl + "/confirmRegistration?token=" + user.getConfirmationToken();
+        String link = appUrl + "/#/confirmRegistration?token=" + user.getConfirmationToken();
 
         MimeMessagePreparator messagePreparator = mimeMessage ->
         {

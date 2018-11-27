@@ -14,7 +14,11 @@ public interface FormRepository  extends JpaRepository<Form, Long>
 
     long countByFormTemplate(FormTemplate formTemplate);
 
+    long countByFormTemplateAndReal(FormTemplate formTemplate, boolean real);
+
     List<Form> findByFormTemplate(FormTemplate formTemplate, Pageable pageable);
+
+    List<Form> findByFormTemplateAndReal(FormTemplate formTemplate, boolean real, Pageable pageable);
 
     long countByAccount(Account account);
 
@@ -34,5 +38,9 @@ public interface FormRepository  extends JpaRepository<Form, Long>
 
     List<Form> findByFormTemplateIdAndStatus(Long id, FormStatus status, Pageable pageable);
 
+    List<Form> findByFormTemplateIdAndStatusAndReal(Long id, FormStatus status, boolean real, Pageable pageable);
+
     Long countByFormTemplateIdAndStatus(Long id, FormStatus status);
+
+    Long countByFormTemplateIdAndStatusAndReal(Long id, FormStatus status, boolean real);
 }

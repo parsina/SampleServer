@@ -206,10 +206,10 @@ public class FormServiceImpl implements FormService
                     counter++;
             }
 
-            Long value = 100L;
-            if (counter > 18)
+            Long value = 1000L;
+            if (counter > 20)
             {
-                for (int i = 0; i < counter - 18; i++)
+                for (int i = 0; i < counter - 20; i++)
                     value = value * 2;
             }
 
@@ -317,10 +317,10 @@ public class FormServiceImpl implements FormService
                     counter++;
             }
 
-            Long value = 100L;
-            if (counter > 18)
+            Long value = 1000L;
+            if (counter > 20)
             {
-                for (int i = 0; i < counter - 18; i++)
+                for (int i = 0; i < counter - 20; i++)
                     value = value * 2;
             }
 
@@ -338,11 +338,14 @@ public class FormServiceImpl implements FormService
                 }
 
                 //Update User Account Wallet
-//                account.getWallet().setBalance((Long.valueOf(account.getWallet().getBalance()) + form.getValue()) + "");
-
-                account.getWallet().setBalance((Long.valueOf(account.getWallet().getBalance()) - value) + "");
+                if (form.isReal())
+                    account.getWallet().setBalance((Long.valueOf(account.getWallet().getBalance()) + form.getValue() - value) + "");
+                else
+                    account.getWallet().setBalance((Long.valueOf(account.getWallet().getBalance()) - value) + "");
                 walletRepository.save(account.getWallet());
-            }
+            } else if (form.isReal()) //Update User Account Wallet
+                account.getWallet().setBalance((Long.valueOf(account.getWallet().getBalance()) + form.getValue()) + "");
+
 
             form.setValue(value);
             form.setReal(realForm);
@@ -425,6 +428,7 @@ public class FormServiceImpl implements FormService
             result.addProperty("name", formTemplate.getName());
             result.addProperty("numberOfForms", formTemplate.getNumberOfForms());
             result.addProperty("totalValue", formTemplate.getTotalValue());
+            result.addProperty("type", formTemplate.getType());
             resultDataList.add(result);
         }
         return resultDataList;
@@ -452,19 +456,26 @@ public class FormServiceImpl implements FormService
     }
 
     @Override
-    public Long countFormList(Long formTemplateId)
+    public Long countFormList(Long formTemplateId, String formType)
     {
-        return formRepository.countByFormTemplate(formTemplateRepository.findById(formTemplateId).get());
+        if (formType.trim().equals("All"))
+            return formRepository.countByFormTemplate(formTemplateRepository.findById(formTemplateId).get());
+        else
+            return formRepository.countByFormTemplateAndReal(formTemplateRepository.findById(formTemplateId).get(), formType.trim().equals("Real"));
     }
 
     @Override
-    public ResultData findFormsByFormTemplate(Long formTemplateId, String filter, String sortOrder, String sortBy, int pageNumber, int pageSize)
+    public ResultData findFormsByFormTemplate(Long formTemplateId, String formType, String filter, String sortOrder, String sortBy, int pageNumber, int pageSize)
     {
         ResultData resultData = new ResultData(true, "");
         if (sortBy.equals("username"))
             sortBy = "account.user.username";
         Sort orderBy = new Sort(sortOrder.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC, sortBy.isEmpty() ? "id" : sortBy);
-        List<Form> forms = formRepository.findByFormTemplate(formTemplateRepository.findById(formTemplateId).get(), PageRequest.of(pageNumber, pageSize, orderBy));
+        List<Form> forms;
+        if (formType.trim().equals("All"))
+            forms = formRepository.findByFormTemplate(formTemplateRepository.findById(formTemplateId).get(), PageRequest.of(pageNumber, pageSize, orderBy));
+        else
+            forms = formRepository.findByFormTemplateAndReal(formTemplateRepository.findById(formTemplateId).get(), formType.trim().equals("Real"), PageRequest.of(pageNumber, pageSize, orderBy));
         List<Map<String, String>> dataList = new ArrayList<>();
         for (Form form : forms)
         {
@@ -472,11 +483,13 @@ public class FormServiceImpl implements FormService
             data.put("id", form.getId().toString());
             data.put("username", userRepository.findByAccount(form.getAccount()).getUsername());
             data.put("name", form.getName());
+            data.put("farsiName", Utills.formFarsiName(form.getName()));
             data.put("createdDate", Utills.nameDisplayForDate(form.getCreatedDate(), false));
             data.put("createdTime", Utills.shortDisplayForTime(form.getCreatedTime().toString()));
             data.put("score", String.valueOf(form.getScore()));
             data.put("value", String.valueOf(form.getValue()));
             data.put("status", form.getStatus().name());
+            data.put("type", form.isReal() ? "حقیقی" : "مجازی");
             dataList.add(data);
         }
         resultData.addProperty("forms", dataList);
@@ -574,9 +587,10 @@ public class FormServiceImpl implements FormService
                 matchData.addProperty("leagueCountry", Utills.getFarsiName(fixture.getVisitorCountryName()));
             matchData.addProperty("time", Utills.shortDisplayForTime(fixture.getTime()));
             matchData.addProperty("date", Utills.nameDisplayForDate(fixture.getDate(), false));
-//            matchData.addProperty("minute", fixture.getMinute() == null ? "00" : fixture.getMinute().length() == 1 ? '0' + fixture.getMinute() : fixture.getMinute());
-            matchData.addProperty("minute", LocalTime.now().getMinute() < 10 ? '0' + LocalTime.now().getMinute() : LocalTime.now().getMinute());
+            matchData.addProperty("minute", fixture.getMinute() == null ? "00" : fixture.getMinute().length() == 1 ? '0' + fixture.getMinute() : fixture.getMinute());
+//            matchData.addProperty("minute", LocalTime.now().getMinute() < 10 ? '0' + LocalTime.now().getMinute() : LocalTime.now().getMinute());
             matchData.addProperty("status", fixture.getStatus());
+            matchData.addProperty("statusTitle", Utills.fixtureStatusFarsiDescription(fixture.getStatus()));
             matchResult.add(matchData);
         }
         return matchResult;
@@ -628,7 +642,7 @@ public class FormServiceImpl implements FormService
     }
 
     @Override
-    public ResultData findFinalizedForms(String formTemplateId, String filter, String sortOrder, String sortBy, int pageNumber, int pageSize)
+    public ResultData findFinalizedForms(String formTemplateId, String formType, String filter, String sortOrder, String sortBy, int pageNumber, int pageSize)
     {
         ResultData data = new ResultData(true, "");
         List<Map> formList = new ArrayList<>();
@@ -643,29 +657,39 @@ public class FormServiceImpl implements FormService
             sorts.add(sortBy);
 
         Sort orderBy = new Sort(sortOrder.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC, sorts);
-        if (formTemplateId != null)
-            for (Form form : formRepository.findByFormTemplateIdAndStatus(Long.valueOf(formTemplateId), FormStatus.FINALIZED, PageRequest.of(pageNumber, pageSize, orderBy)))
-            {
-                Map<String, Object> formMap = new HashMap<>();
-                formMap.put("id", form.getId());
-                formMap.put("name", form.getName());
-                formMap.put("value", form.getValue());
-                formMap.put("score", form.getScore());
-                formMap.put("createdDate", Utills.nameDisplayForDate(form.getCreatedDate().toString(), false));
-                formMap.put("createdTime", Utills.shortDisplayForTime(form.getCreatedTime().toString()));
-                formMap.put("real", form.isReal());
-                formMap.put("username", form.getAccount().getUser().getUsername());
-                formList.add(formMap);
-            }
+        List<Form> forms;
+        if(formType.trim().equals("All"))
+            forms = formRepository.findByFormTemplateIdAndStatus(Long.valueOf(formTemplateId), FormStatus.FINALIZED, PageRequest.of(pageNumber, pageSize, orderBy));
+        else
+            forms = formRepository.findByFormTemplateIdAndStatusAndReal(Long.valueOf(formTemplateId), FormStatus.FINALIZED, formType.trim().equals("Real"), PageRequest.of(pageNumber, pageSize, orderBy));
+
+        for (Form form : forms)
+        {
+            Map<String, Object> formMap = new HashMap<>();
+            formMap.put("id", form.getId());
+            formMap.put("name", form.getName());
+            formMap.put("farsiName", Utills.formFarsiName(form.getName()));
+            formMap.put("value", form.getValue());
+            formMap.put("score", form.getScore());
+            formMap.put("createdDate", Utills.nameDisplayForDate(form.getCreatedDate().toString(), false));
+            formMap.put("createdTime", Utills.shortDisplayForTime(form.getCreatedTime().toString()));
+            formMap.put("real", form.isReal());
+            formMap.put("username", form.getAccount().getUser().getUsername());
+            formList.add(formMap);
+        }
         data.addProperty("forms", formList);
         return data;
     }
 
     @Override
-    public Long countFinalizedForms(String formTemplateId)
+    public Long countFinalizedForms(String formTemplateId, String formType)
     {
         if (formTemplateId == null)
             return 0L;
-        return formRepository.countByFormTemplateIdAndStatus(Long.valueOf(formTemplateId), FormStatus.FINALIZED);
+        if (formType.equals("All"))
+            return formRepository.countByFormTemplateIdAndStatus(Long.valueOf(formTemplateId), FormStatus.FINALIZED);
+        else
+            return formRepository.countByFormTemplateIdAndStatusAndReal(Long.valueOf(formTemplateId), FormStatus.FINALIZED, formType.trim().equals("Real"));
+
     }
 }

@@ -9,6 +9,7 @@ import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.Winner;
 import com.coin.app.repository.FormTemplateRepository;
 import com.coin.app.repository.WinnerRepository;
+import com.coin.app.util.Utills;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -47,6 +48,7 @@ public class WinnerServiceImpl implements WinnerService
             data.put("winnerPlace", winner.getWinnerPlace().name());
             data.put("formId", winner.getForm().getId().toString());
             data.put("formName", winner.getForm().getName());
+            data.put("farsiName", Utills.formFarsiName(winner.getForm().getName()));
             data.put("formValue", Long.valueOf(winner.getForm().getValue()).toString());
             data.put("formScore", Integer.valueOf(winner.getForm().getScore()).toString());
             dataList.add(data);

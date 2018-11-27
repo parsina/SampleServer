@@ -1,5 +1,9 @@
 package com.coin.app;
 
+import java.util.Arrays;
+import java.util.Collection;
+
+import com.coin.app.security.ClientTest;
 import com.coin.app.service.BitcoinJService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationRunner;
@@ -32,14 +36,20 @@ public class CoinServerApplication
     ApplicationRunner init()
     {
         bitcoinJService.initialize();
+//        Collection<String> domains = Arrays.asList("localhost.com:8080");
+//        try
+//        {
+//            ClientTest ct = new ClientTest();
+//            ct.fetchCertificate(domains);
+//        } catch (Exception ex)
+//        {
+//            System.out.println(" >>>>>> Error : Failed to get a certificate for domains " + domains);
+//        }
         return args ->
         {
         };
     }
 }
-
-
-
 
 
 //// To deploy to external server (Tomcat)
@@ -62,7 +72,8 @@ public class CoinServerApplication
 //    }
 //
 //    @Override
-//    protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
+//    protected SpringApplicationBuilder configure(SpringApplicationBuilder application)
+//    {
 //        return application.sources(CoinServerApplication.class);
 //    }
 //
@@ -70,6 +81,15 @@ public class CoinServerApplication
 //    ApplicationRunner init()
 //    {
 //        bitcoinJService.initialize();
+//        Collection<String> domains = Arrays.asList("localhost.com:8080");
+//        try
+//        {
+//            ClientTest ct = new ClientTest();
+//            ct.fetchCertificate(domains);
+//        } catch (Exception ex)
+//        {
+//            System.out.println(" >>>>>> Error : Failed to get a certificate for domains " + domains);
+//        }
 //        return args ->
 //        {
 //        };

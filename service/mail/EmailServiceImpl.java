@@ -46,7 +46,7 @@ public class EmailServiceImpl implements EmailService
             user.setAccount(accountService.createAccount(user));
         userService.saveUser(user);
 
-        String message = "لطفا جهت تایید ایمیل و فعال سازی حساب خود بر روی لینک زیر کلیک نمایید: " ;
+        String message = "لطفا جهت تایید ایمیل و فعال سازی حساب خود بر روی لینک زیر کلیک نمایید. " ;
         String link = appUrl + "/#/confirmRegistration?token=" + user.getConfirmationToken();
 
         MimeMessagePreparator messagePreparator = mimeMessage ->
@@ -104,16 +104,17 @@ public class EmailServiceImpl implements EmailService
         String code = ( 100000 + rnd.nextInt(900000 )) + " ";
 
         ResultData resultData = new ResultData(true, "");
-        if(userService.getCurrentUser().getId().equals(Long.valueOf(userId)))
-        {
-            Account account = userService.getCurrentUser().getAccount();
+//        if(userService.getCurrentUser().getId().equals(Long.valueOf(userId)))
+//        {
+            User user = userService.findById(Long.valueOf(userId));
+            Account account = user.getAccount();
             account.setDescription(code);
             accountRepository.save(account);
 
             MimeMessagePreparator messagePreparator = mimeMessage ->
             {
                 MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage);
-                messageHelper.setTo(userService.getCurrentUser().getEmail());
+                messageHelper.setTo(user.getEmail());
                 messageHelper.setSubject("کد امنیتی");
                 String content = mailContentBuilderService.build(message, code, "securityCode");
                 messageHelper.setText(content, true);
@@ -124,11 +125,10 @@ public class EmailServiceImpl implements EmailService
                 return resultData;
             } catch (MailException e)
             {
-                // runtime exception; compiler will not force you to handle it
                 return new ResultData(false, "Email sending problem!");
             }
-        }
-        else return new ResultData(false, "Authentication problem!");
+//        }
+//        else return new ResultData(false, "Authentication problem!");
     }
 
     @Override

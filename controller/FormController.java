@@ -130,15 +130,15 @@ public class FormController
     }
 
     @PostMapping("/formListSize")
-    public Long templateFormsSize(@RequestBody Map<String, Long> input)
+    public Long templateFormsSize(@RequestBody Map<String, String> input)
     {
-        return formService.countFormList(input.get("formTemplateId"));
+        return formService.countFormList(Long.valueOf(input.get("formTemplateId")), input.get("formType"));
     }
 
     @PostMapping("/formList")
     public ResultData templateForms(@RequestBody Map<String, String> input)
     {
-        return formService.findFormsByFormTemplate(Long.valueOf(input.get("formTemplateId")), input.get("filter"), input.get("sortOrder"), input.get("sortBy"), Integer.valueOf(input.get("pageNumber")), Integer.valueOf(input.get("pageSize")));
+        return formService.findFormsByFormTemplate(Long.valueOf(input.get("formTemplateId")), input.get("formType"), input.get("filter"), input.get("sortOrder"), input.get("sortBy"), Integer.valueOf(input.get("pageNumber")), Integer.valueOf(input.get("pageSize")));
     }
 
     @Secured({"ROLE_ADMIN", "ROLE_USER"})
@@ -167,13 +167,13 @@ public class FormController
     @PostMapping("/finalizeFormsData")
     public ResultData finalizeFormsData(@RequestBody Map<String, String> input)
     {
-        return formService.findFinalizedForms(input.get("templateId"), input.get("filter"), input.get("sortOrder"), input.get("sortBy"), Integer.valueOf(input.get("pageNumber")), Integer.valueOf(input.get("pageSize")));
+        return formService.findFinalizedForms(input.get("templateId"), input.get("formType"), input.get("filter"), input.get("sortOrder"), input.get("sortBy"), Integer.valueOf(input.get("pageNumber")), Integer.valueOf(input.get("pageSize")));
     }
 
     @PostMapping("/finalizeFormsCount")
     public Long finalizeFormsCount(@RequestBody Map<String, String> input)
     {
-        return formService.countFinalizedForms(input.get("templateId"));
+        return formService.countFinalizedForms(input.get("templateId"), input.get("formType"));
     }
 
 

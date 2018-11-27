@@ -38,9 +38,9 @@ public interface FormService
 
     Long getFormTemplatesCount(List<FormTemplateStatus> statuses, String challengeType);
 
-    Long countFormList(Long formTemplateId);
+    Long countFormList(Long formTemplateId, String formType);
 
-    ResultData findFormsByFormTemplate(Long formTemplateId, String filter, String sortOrder, String sortBy, int pageNumber,int pageSize);
+    ResultData findFormsByFormTemplate(Long formTemplateId, String formType, String filter, String sortOrder, String sortBy, int pageNumber,int pageSize);
 
     Long getUserFormsSize(String type);
 
@@ -50,7 +50,7 @@ public interface FormService
 
     ResponseEntity<InputStreamResource> downloadPhotoCal(Long formTemplateId) throws FileNotFoundException;
 
-    ResultData findFinalizedForms(String formTemplateId, String filter, String sortOrder, String sortBy, int pageNumber,int pageSize);
+    ResultData findFinalizedForms(String formTemplateId, String formType, String filter, String sortOrder, String sortBy, int pageNumber,int pageSize);
 
-    Long countFinalizedForms(String formTemplateId);
+    Long countFinalizedForms(String formTemplateId, String formType);
 }

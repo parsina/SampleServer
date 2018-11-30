@@ -27,6 +27,7 @@ import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.kits.WalletAppKit;
+import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.SendRequest;
@@ -44,6 +45,9 @@ public class BitCoinJServiceImpl implements BitcoinJService
 
     @Value("${app.walletKit.password}")
     private String walletPass;
+
+    @Value("${app.walletKit.netType}")
+    private String networkType;
 
     @Autowired
     TransactionService transactionService;
@@ -76,7 +80,11 @@ public class BitCoinJServiceImpl implements BitcoinJService
         // - MainNetParams for main bitcoin network
         // - TestNet3Params for test app with a real network
         // - RegTestParams for developing project (Developement)
-        networkParameters = TestNet3Params.get();
+
+        if(networkType.trim().toLowerCase().equals("mainnetwork"))
+            networkParameters = MainNetParams.get();
+        else
+            networkParameters = TestNet3Params.get();
         initializeWallet();
     }
 

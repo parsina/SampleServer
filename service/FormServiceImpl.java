@@ -158,7 +158,8 @@ public class FormServiceImpl implements FormService
                 matchRepository.deleteAll(matchRepository.findByForm(form));
 
                 Transaction transaction = transactionRepository.findByTxId("FAT-" + form.getId() + "-" + form.getAccount().getId() + "-" + form.getFormTemplate().getId());
-                transactionRepository.delete(transaction);
+                if(transaction != null)
+                    transactionRepository.delete(transaction);
                 Wallet wallet = walletRepository.findById(form.getAccount().getWallet().getId()).get();
                 if (form.isReal())
                 {
@@ -527,6 +528,7 @@ public class FormServiceImpl implements FormService
             Map<String, Object> formMap = new HashMap<>();
             formMap.put("id", form.getId());
             formMap.put("name", form.getName());
+            formMap.put("farsiName", Utills.formFarsiName(form.getName()));
             formMap.put("value", form.getValue());
             formMap.put("score", form.getScore());
             formMap.put("createdDate", Utills.nameDisplayForDate(form.getCreatedDate(), false));

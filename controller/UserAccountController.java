@@ -5,6 +5,7 @@ import java.util.Map;
 import com.coin.app.dto.data.ResultData;
 import com.coin.app.service.AccountService;
 import com.coin.app.service.TransactionService;
+import com.coin.app.service.mail.AmazonSESService;
 import com.coin.app.service.mail.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.annotation.Secured;
@@ -28,6 +29,9 @@ public class UserAccountController
 
     @Autowired
     private TransactionService transactionService;
+
+    @Autowired
+    private AmazonSESService amazonSESService;
 
     @Secured({"ROLE_ADMIN", "ROLE_USER"})
     @PostMapping("/userAccount")

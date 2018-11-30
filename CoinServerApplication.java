@@ -81,15 +81,15 @@ public class CoinServerApplication
 //    ApplicationRunner init()
 //    {
 //        bitcoinJService.initialize();
-//        Collection<String> domains = Arrays.asList("localhost.com:8080");
-//        try
-//        {
-//            ClientTest ct = new ClientTest();
-//            ct.fetchCertificate(domains);
-//        } catch (Exception ex)
-//        {
-//            System.out.println(" >>>>>> Error : Failed to get a certificate for domains " + domains);
-//        }
+////        Collection<String> domains = Arrays.asList("localhost.com:8080");
+////        try
+////        {
+////            ClientTest ct = new ClientTest();
+////            ct.fetchCertificate(domains);
+////        } catch (Exception ex)
+////        {
+////            System.out.println(" >>>>>> Error : Failed to get a certificate for domains " + domains);
+////        }
 //        return args ->
 //        {
 //        };

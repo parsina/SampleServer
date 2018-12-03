@@ -673,7 +673,7 @@ public class FormServiceImpl implements FormService
             formMap.put("farsiName", Utills.formFarsiName(form.getName()));
             formMap.put("value", form.getValue());
             formMap.put("score", form.getScore());
-            formMap.put("createdDate", Utills.nameDisplayForDate(form.getCreatedDate().toString(), false));
+            formMap.put("createdDate", Utills.nameDisplayForDate(LocalDate.parse(form.getCreatedDate().toString()), false));
             formMap.put("createdTime", Utills.shortDisplayForTime(form.getCreatedTime().toString()));
             formMap.put("real", form.isReal());
             formMap.put("username", form.getAccount().getUser().getUsername());

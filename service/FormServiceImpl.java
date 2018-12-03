@@ -404,7 +404,7 @@ public class FormServiceImpl implements FormService
     public List<ResultData> findFormTemplatesByStatus(List<FormTemplateStatus> statuses)
     {
         List<ResultData> resultDataList = new ArrayList<>();
-        for (FormTemplate formTemplate : formTemplateRepository.findAllByStatusIsInOrderByCreatedDateAsc(statuses))
+        for (FormTemplate formTemplate : formTemplateRepository.findAllByStatusIsIn(statuses))
         {
             ResultData result = new ResultData(true, "");
             result.addProperty("id", formTemplate.getId());

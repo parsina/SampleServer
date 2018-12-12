@@ -53,19 +53,19 @@ import org.slf4j.LoggerFactory;
 public class ClientTest
 {
     // File name of the User Key Pair
-    private static final File USER_KEY_FILE = new File("user.key");
+    private static final File USER_KEY_FILE = new File("uservkey.pem");
 
     // File name of the Domain Key Pair
-    private static final File DOMAIN_KEY_FILE = new File("domain.key");
+    private static final File DOMAIN_KEY_FILE = new File("domainkey.pem");
 
     // File name of the CSR
-    private static final File DOMAIN_CSR_FILE = new File("domain.csr");
+    private static final File DOMAIN_CSR_FILE = new File("bigbitbet.csr");
 
     // File name of the signed certificate
-    private static final File DOMAIN_CHAIN_FILE = new File("domain-chain.crt");
+    private static final File DOMAIN_CHAIN_FILE = new File("bigbitbet.cer");
 
     //Challenge type to be used
-    private static final ChallengeType CHALLENGE_TYPE = ChallengeType.HTTP;
+    private static final ChallengeType CHALLENGE_TYPE = ChallengeType.DNS;
 
     // RSA key size of generated key pairs
     private static final int KEY_SIZE = 2048;
@@ -92,7 +92,7 @@ public class ClientTest
 
         // Create a session for Let's Encrypt.
         // Use "acme://letsencrypt.org" for production server
-        Session session = new Session("acme://letsencrypt.org/staging");
+        Session session = new Session("acme://letsencrypt.org");
 
         // Get the Account.
         // If there is no account yet, create a new one.
@@ -111,7 +111,7 @@ public class ClientTest
         }
 
         // Generate a CSR for all of the domains, and sign it with the domain key pair.
-        CSRBuilder csrb = new CSRBuilder();
+        CSRBuilder csrb =  new CSRBuilder();
         csrb.addDomains(domains);
         csrb.sign(domainKeyPair);
 
@@ -127,7 +127,7 @@ public class ClientTest
         // Wait for the order to complete
         try
         {
-            int attempts = 10;
+            int attempts = 100;
             while (order.getStatus() != Status.VALID && attempts-- > 0)
             {
                 // Did the order fail?
@@ -298,7 +298,7 @@ public class ClientTest
         // Poll for the challenge to complete.
         try
         {
-            int attempts = 10;
+            int attempts = 100;
             while (challenge.getStatus() != Status.VALID && attempts-- > 0)
             {
                 // Did the authorization fail?

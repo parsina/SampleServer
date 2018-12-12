@@ -35,8 +35,13 @@ public class CoinServerApplication
     @Bean
     ApplicationRunner init()
     {
-        bitcoinJService.initialize();
-//        Collection<String> domains = Arrays.asList("localhost.com:8080");
+       bitcoinJService.initialize();
+
+//    //  To create Certificate uncomment this section and comment above line.
+//    //  You probably need to run project multiple time to provide certificate file
+//    //  At the end, it create 4 files: userkey.pem, domainkey.pem, bigbitbet.csr, bigbitbet.cer
+//    //  You have to copy domainkey.pem and bigbitbet.cer to ec2 server
+//        Collection<String> domains = Arrays.asList("www.bigbitbet.com", "bigbitbet.com");
 //        try
 //        {
 //            ClientTest ct = new ClientTest();
@@ -81,15 +86,6 @@ public class CoinServerApplication
 //    ApplicationRunner init()
 //    {
 //        bitcoinJService.initialize();
-////        Collection<String> domains = Arrays.asList("localhost.com:8080");
-////        try
-////        {
-////            ClientTest ct = new ClientTest();
-////            ct.fetchCertificate(domains);
-////        } catch (Exception ex)
-////        {
-////            System.out.println(" >>>>>> Error : Failed to get a certificate for domains " + domains);
-////        }
 //        return args ->
 //        {
 //        };

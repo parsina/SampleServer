@@ -7,7 +7,7 @@ public class Validator
 {
     public static boolean isValidEmailAddress(String email)
     {
-        boolean result = true;
+        boolean result = email.contains("@") && email.contains(".");
         try
         {
             InternetAddress emailAddr = new InternetAddress(email);

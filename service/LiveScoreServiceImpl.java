@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+import javax.rmi.CORBA.Util;
+
 import com.coin.app.CoinServerApplication;
 import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.livescore.Fixture;
@@ -60,8 +62,8 @@ public class LiveScoreServiceImpl implements LiveScoreService
     @Override
     public void loadFixtures()
     {
-        String fDate = LocalDate.now().minusDays(10).toString();
-        String tDate = LocalDate.now().plusDays(50).toString();
+        String fDate = LocalDate.now().minusDays(1).toString();
+        String tDate = LocalDate.now().plusDays(20).toString();
 
         String uri = this.root + "fixtures/between/" + fDate + "/" + tDate + "?api_token=" + this.key + "&include=localTeam,visitorTeam,league,inplay";
         String content = fetchContent(uri);
@@ -124,7 +126,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
     {
         List<ResultData> results = new ArrayList<>();
 
-        List<Fixture> fixtures = fixtureRepository.findByUsedAndStatusIsAndLocalDateGreaterThanOrderByDateAscTimeAsc(false, FixtureStatus.NS, LocalDate.now());
+        List<Fixture> fixtures = fixtureRepository.findByUsedAndStatusIsAndLocalDateGreaterThanOrderByDateAscTimeAsc(false, FixtureStatus.NS, LocalDate.now().plusDays(4));
 
         for (Fixture fixture : fixtures)
         {
@@ -133,13 +135,13 @@ public class LiveScoreServiceImpl implements LiveScoreService
             result.addProperty("checked", false);
             result.addProperty("date", Utills.nameDisplayForDate(fixture.getDate(), true));
             result.addProperty("time", Utills.shortDisplayForTime(fixture.getTime()));
-            result.addProperty("league", fixture.getLeagueName());
-            result.addProperty("homeTeam", fixture.getLocalTeamName());
+            result.addProperty("league", Utills.getFarsiName(fixture.getLeagueName()));
+            result.addProperty("homeTeam", Utills.getFarsiName(fixture.getLocalTeamName()));
             result.addProperty("homeLogo", fixture.getLocalTeamLogo());
-            result.addProperty("homeCountry", fixture.getLocalCountryName());
-            result.addProperty("awayTeam", fixture.getVisitorTeamName());
+            result.addProperty("homeCountry", Utills.getFarsiName(fixture.getLocalCountryName()));
+            result.addProperty("awayTeam", Utills.getFarsiName(fixture.getVisitorTeamName()));
             result.addProperty("awayLogo", fixture.getVisitorTeamLogo());
-            result.addProperty("awayCountry", fixture.getVisitorCountryName());
+            result.addProperty("awayCountry", Utills.getFarsiName(fixture.getVisitorCountryName()));
             results.add(result);
         }
         return results;
@@ -197,9 +199,12 @@ public class LiveScoreServiceImpl implements LiveScoreService
         if (countryContent != null)
         {
             JsonObject countryObject = toJsonObject(countryContent);
-            fixture.setLocalCountryName(countryObject.get("data").getAsJsonObject().get("name").getAsString());
-            fixture.setLocalCountryFIFAName(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("fifa").getAsString());
-            fixture.setLocalCountryFlag(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("flag").getAsString());
+            fixture.setLocalCountryName(countryObject.get("data").getAsJsonObject().get("name").getAsString().equals("Monaco") ? "France" : countryObject.get("data").getAsJsonObject().get("name").getAsString());
+            if(!countryObject.get("data").getAsJsonObject().get("extra").toString().equals("null"))
+            {
+                fixture.setLocalCountryFIFAName(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("fifa").getAsString());
+                fixture.setLocalCountryFlag(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("flag").getAsString());
+            }
         }
 
         // Visitor Team Data
@@ -213,9 +218,12 @@ public class LiveScoreServiceImpl implements LiveScoreService
         if (countryContent != null)
         {
             JsonObject countryObject = toJsonObject(countryContent);
-            fixture.setVisitorCountryName(countryObject.get("data").getAsJsonObject().get("name").getAsString());
-            fixture.setVisitorCountryFIFAName(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("fifa").getAsString());
-            fixture.setVisitorCountryFlag(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("flag").getAsString());
+            fixture.setVisitorCountryName(countryObject.get("data").getAsJsonObject().get("name").getAsString().equals("Monaco") ? "France" : countryObject.get("data").getAsJsonObject().get("name").getAsString());
+            if(!countryObject.get("data").getAsJsonObject().get("extra").toString().equals("null"))
+            {
+                fixture.setVisitorCountryFIFAName(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("fifa").getAsString());
+                fixture.setVisitorCountryFlag(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("flag").getAsString());
+            }
         }
 
         fixtureRepository.save(fixture);

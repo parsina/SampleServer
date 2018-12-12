@@ -93,6 +93,12 @@ public class BitCoinJServiceImpl implements BitcoinJService
     {
         while (walletAppKit == null)
         {
+            System.out.println("\n------------------------------------------");
+            System.out.println("------------------------------------------");
+            System.out.println(" >>>>>>>>  Initializing wallet  ==> Awate Running ... ");
+            System.out.println("------------------------------------------");
+            System.out.println("------------------------------------------\n");
+
             walletAppKit = new WalletAppKit(networkParameters, new File(walletPath), "coinWallet");
             walletAppKit.startAsync();
             walletAppKit.awaitRunning();

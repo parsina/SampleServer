@@ -282,6 +282,8 @@ public class FormServiceImpl implements FormService
             resultData.setSuccess(true);
             resultData.setMessage("فرم ثبت شد");
             resultData.addProperty("accountBalance", account.getWallet().getBalance());
+            resultData.addProperty("formName", Utills.formFarsiName(form.getName()));
+            resultData.addProperty("real", form.isReal());
         } else
             resultData.setMessage("کاربر اجازه ثبت فرم را ندارد");
         return resultData;
@@ -395,6 +397,8 @@ public class FormServiceImpl implements FormService
             resultData.setSuccess(true);
             resultData.setMessage("فرم ثبت شد");
             resultData.addProperty("accountBalance", account.getWallet().getBalance());
+            resultData.addProperty("formName", Utills.formFarsiName(form.getName()));
+            resultData.addProperty("real", form.isReal());
         } else
             resultData.setMessage("کاربر اجازه ثبت فرم را ندارد");
         return resultData;
@@ -587,6 +591,10 @@ public class FormServiceImpl implements FormService
             matchData.addProperty("league", Utills.getFarsiName(fixture.getLeagueName()));
             if (fixture.getLocalTeamCountryId().equals(fixture.getVisitorTeamCountryId()))
                 matchData.addProperty("leagueCountry", Utills.getFarsiName(fixture.getVisitorCountryName()));
+            else if(fixture.getLeagueId() == 301L) // France vs Monaco !!!
+                matchData.addProperty("leagueCountry", Utills.getFarsiName("France"));
+            else if(fixture.getLeagueId() == 8L) // Wales vs England !!!
+                matchData.addProperty("leagueCountry", Utills.getFarsiName("England"));
             matchData.addProperty("time", Utills.shortDisplayForTime(fixture.getTime()));
             matchData.addProperty("date", Utills.nameDisplayForDate(fixture.getDate(), false));
             matchData.addProperty("minute", fixture.getMinute() == null ? "00" : fixture.getMinute().length() == 1 ? '0' + fixture.getMinute() : fixture.getMinute());
@@ -670,13 +678,13 @@ public class FormServiceImpl implements FormService
             Map<String, Object> formMap = new HashMap<>();
             formMap.put("id", form.getId());
             formMap.put("name", form.getName());
+            formMap.put("username", form.getAccount().getUser().getUsername());
             formMap.put("farsiName", Utills.formFarsiName(form.getName()));
             formMap.put("value", form.getValue());
             formMap.put("score", form.getScore());
             formMap.put("createdDate", Utills.nameDisplayForDate(LocalDate.parse(form.getCreatedDate().toString()), false));
             formMap.put("createdTime", Utills.shortDisplayForTime(form.getCreatedTime().toString()));
             formMap.put("real", form.isReal());
-            formMap.put("username", form.getAccount().getUser().getUsername());
             formList.add(formMap);
         }
         data.addProperty("forms", formList);

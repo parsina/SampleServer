@@ -12,7 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface FixtureRepository extends JpaRepository<Fixture, Long>
 {
-    List<Fixture> findByUsedAndStatusIsAndLocalDateGreaterThanOrderByDateAscTimeAsc(boolean used, FixtureStatus status, LocalDate localDate);
+    List<Fixture> findTop50ByUsedAndStatusIsAndLocalDateGreaterThanOrderByDateAscTimeAsc(boolean used, FixtureStatus status, LocalDate localDate);
 
     List<Fixture> findByFormTemplateOrderByDateAscTimeAsc(FormTemplate formTemplate);
 

@@ -6,7 +6,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,6 +24,7 @@ import com.coin.app.model.enums.FormStatus;
 import com.coin.app.model.livescore.FormTemplate;
 import com.coin.app.model.enums.FormTemplateStatus;
 import com.coin.app.model.livescore.Match;
+import com.coin.app.repository.FixtureInfoRepository;
 import com.coin.app.repository.FixtureRepository;
 import com.coin.app.repository.FormRepository;
 import com.coin.app.repository.FormTemplateRepository;
@@ -77,6 +77,9 @@ public class FormServiceImpl implements FormService
     @Autowired
     private WalletRepository walletRepository;
 
+    @Autowired
+    private FixtureInfoRepository fixtureInfoRepository;
+
     @Override
     public ResultData findFormTemplate(Long formId)
     {
@@ -121,7 +124,7 @@ public class FormServiceImpl implements FormService
         if (userService.isAuthenticated(userService.getCurrentUser().getId()))
         {
             FormTemplate formTemplate = formTemplateRepository.findById(id).get();
-            if (formTemplate.getStatus().equals(FormTemplateStatus.OPEN))
+            if (formTemplate.getStatus().equals(FormTemplateStatus.OPEN) || formTemplate.getStatus().equals(FormTemplateStatus.CLOSE))
             {
                 for (Form form : formRepository.findByFormTemplate(formTemplate))
                 {
@@ -153,7 +156,7 @@ public class FormServiceImpl implements FormService
         if (userService.isAuthenticated(userService.getCurrentUser().getId()))
         {
             Form form = formRepository.findById(formId).get();
-            if (form.getStatus().equals(FormStatus.REGISTERED))
+            if (form.getStatus().equals(FormStatus.REGISTERED) || form.getStatus().equals(FormStatus.FINALIZED))
             {
                 matchRepository.deleteAll(matchRepository.findByForm(form));
 
@@ -408,7 +411,7 @@ public class FormServiceImpl implements FormService
     public List<ResultData> findFormTemplatesByStatus(List<FormTemplateStatus> statuses)
     {
         List<ResultData> resultDataList = new ArrayList<>();
-        for (FormTemplate formTemplate : formTemplateRepository.findAllByStatusIsIn(statuses))
+        for (FormTemplate formTemplate : formTemplateRepository.findAllByStatusIsInOrderByCreatedDateAsc(statuses))
         {
             ResultData result = new ResultData(true, "");
             result.addProperty("id", formTemplate.getId());
@@ -578,23 +581,23 @@ public class FormServiceImpl implements FormService
             ResultData matchData = new ResultData(true, "");
             matchData.addProperty("id", fixture.getId());
             matchData.addProperty("formTemplateId", fixture.getFormTemplate().getId());
-            matchData.addProperty("homeName", Utills.getFarsiName(fixture.getLocalTeamName()));
-            matchData.addProperty("homeCountry", Utills.getFarsiName(fixture.getLocalCountryName()));
+            matchData.addProperty("homeName", fixture.getLocalTeamName() == null ? "" : fixtureInfoRepository.findByName(fixture.getLocalTeamName()).getFarsiName());
+            matchData.addProperty("homeCountry", fixture.getLocalCountryName() == null ? "" : fixtureInfoRepository.findByName(fixture.getLocalCountryName()).getFarsiName());
             matchData.addProperty("homeCountryFlag", fixture.getLocalCountryFlag());
             matchData.addProperty("homeLogo", fixture.getLocalTeamLogo());
             matchData.addProperty("homeScore", fixture.getLocalTeamScore());
-            matchData.addProperty("awayName", Utills.getFarsiName(fixture.getVisitorTeamName()));
-            matchData.addProperty("awayCountry", Utills.getFarsiName(fixture.getVisitorCountryName()));
+            matchData.addProperty("awayName", fixture.getVisitorTeamName() == null ? "" : fixtureInfoRepository.findByName(fixture.getVisitorTeamName()).getFarsiName());
+            matchData.addProperty("awayCountry", fixture.getVisitorCountryName() == null ? "" : fixtureInfoRepository.findByName(fixture.getVisitorCountryName()).getFarsiName());
             matchData.addProperty("awayCountryFlag", fixture.getVisitorCountryFlag());
             matchData.addProperty("awayLogo", fixture.getVisitorTeamLogo());
             matchData.addProperty("awayScore", fixture.getVisitorTeamScore());
-            matchData.addProperty("league", Utills.getFarsiName(fixture.getLeagueName()));
+            matchData.addProperty("league", fixture.getLeagueName() == null ? "" : fixtureInfoRepository.findByName(fixture.getLeagueName()).getFarsiName());
             if (fixture.getLocalTeamCountryId().equals(fixture.getVisitorTeamCountryId()))
-                matchData.addProperty("leagueCountry", Utills.getFarsiName(fixture.getVisitorCountryName()));
+                matchData.addProperty("leagueCountry", fixture.getVisitorCountryName() == null ? "" : fixtureInfoRepository.findByName(fixture.getVisitorCountryName()).getFarsiName());
             else if(fixture.getLeagueId() == 301L) // France vs Monaco !!!
-                matchData.addProperty("leagueCountry", Utills.getFarsiName("France"));
+                matchData.addProperty("leagueCountry", fixtureInfoRepository.findByName("France").getFarsiName());
             else if(fixture.getLeagueId() == 8L) // Wales vs England !!!
-                matchData.addProperty("leagueCountry", Utills.getFarsiName("England"));
+                matchData.addProperty("leagueCountry", fixtureInfoRepository.findByName("England").getFarsiName());
             matchData.addProperty("time", Utills.shortDisplayForTime(fixture.getTime()));
             matchData.addProperty("date", Utills.nameDisplayForDate(fixture.getDate(), false));
             matchData.addProperty("minute", fixture.getMinute() == null ? "00" : fixture.getMinute().length() == 1 ? '0' + fixture.getMinute() : fixture.getMinute());
@@ -652,7 +655,7 @@ public class FormServiceImpl implements FormService
     }
 
     @Override
-    public ResultData findFinalizedForms(String formTemplateId, String formType, String filter, String sortOrder, String sortBy, int pageNumber, int pageSize)
+    public ResultData findFormsData(String formTemplateId, String formType, String formStatus, String filter, String sortOrder, String sortBy, int pageNumber, int pageSize)
     {
         ResultData data = new ResultData(true, "");
         List<Map> formList = new ArrayList<>();
@@ -665,13 +668,26 @@ public class FormServiceImpl implements FormService
             sorts.add("account.user.username");
         else
             sorts.add(sortBy);
-
         Sort orderBy = new Sort(sortOrder.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC, sorts);
-        List<Form> forms;
-        if(formType.trim().equals("All"))
-            forms = formRepository.findByFormTemplateIdAndStatus(Long.valueOf(formTemplateId), FormStatus.FINALIZED, PageRequest.of(pageNumber, pageSize, orderBy));
+
+        List<FormStatus> formStatuses = new ArrayList<>();
+        if(formStatus.equals("All"))
+        {
+            formStatuses.add(FormStatus.REGISTERED);
+            formStatuses.add(FormStatus.FINALIZED);
+            formStatuses.add(FormStatus.PASSED);
+        }
         else
-            forms = formRepository.findByFormTemplateIdAndStatusAndReal(Long.valueOf(formTemplateId), FormStatus.FINALIZED, formType.trim().equals("Real"), PageRequest.of(pageNumber, pageSize, orderBy));
+            formStatuses.add(FormStatus.valueOf(formStatus));
+
+        List<Form> forms = new ArrayList<>();
+        if(formTemplateId != null)
+        {
+            if (formType.trim().equals("All"))
+                forms = formRepository.findByFormTemplateIdAndStatusIsIn(Long.valueOf(formTemplateId), formStatuses, PageRequest.of(pageNumber, pageSize, orderBy));
+            else
+                forms = formRepository.findByFormTemplateIdAndStatusIsInAndReal(Long.valueOf(formTemplateId), formStatuses, formType.trim().equals("Real"), PageRequest.of(pageNumber, pageSize, orderBy));
+        }
 
         for (Form form : forms)
         {
@@ -692,14 +708,24 @@ public class FormServiceImpl implements FormService
     }
 
     @Override
-    public Long countFinalizedForms(String formTemplateId, String formType)
+    public Long countForms(String formTemplateId, String formType, String formStatus)
     {
         if (formTemplateId == null)
             return 0L;
-        if (formType.equals("All"))
-            return formRepository.countByFormTemplateIdAndStatus(Long.valueOf(formTemplateId), FormStatus.FINALIZED);
+        List<FormStatus> formStatuses = new ArrayList<>();
+        if(formStatus.equals("All"))
+        {
+            formStatuses.add(FormStatus.REGISTERED);
+            formStatuses.add(FormStatus.FINALIZED);
+            formStatuses.add(FormStatus.PASSED);
+        }
         else
-            return formRepository.countByFormTemplateIdAndStatusAndReal(Long.valueOf(formTemplateId), FormStatus.FINALIZED, formType.trim().equals("Real"));
+            formStatuses.add(FormStatus.valueOf(formStatus));
+
+        if (formType.equals("All"))
+            return formRepository.countByFormTemplateIdAndStatusIsIn(Long.valueOf(formTemplateId), formStatuses);
+        else
+            return formRepository.countByFormTemplateIdAndStatusIsInAndReal(Long.valueOf(formTemplateId), formStatuses, formType.trim().equals("Real"));
 
     }
 }

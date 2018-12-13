@@ -19,13 +19,6 @@ public class WebMvcConfig implements WebMvcConfigurer
                 .allowedMethods("HEAD", "OPTIONS", "GET", "POST")
                 .allowCredentials(true)
                 .maxAge(3600);
-        System.out.println( "<<<<< <<<< <<< << < CORS Origins > >> >>> >>>> >>>>> : " + appUrl);
-        System.out.println( "<<<<< <<<< <<< << < CORS Origins > >> >>> >>>> >>>>> : " + appUrl);
-        System.out.println( "<<<<< <<<< <<< << < CORS Origins > >> >>> >>>> >>>>> : " + appUrl);
-        System.out.println( "<<<<< <<<< <<< << < CORS Origins > >> >>> >>>> >>>>> : " + appUrl);
-        System.out.println( "<<<<< <<<< <<< << < CORS Origins > >> >>> >>>> >>>>> : " + appUrl);
-        System.out.println( "<<<<< <<<< <<< << < CORS Origins > >> >>> >>>> >>>>> : " + appUrl);
-        System.out.println( "<<<<< <<<< <<< << < CORS Origins > >> >>> >>>> >>>>> : " + appUrl);
     }
 
 

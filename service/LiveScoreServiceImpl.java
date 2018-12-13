@@ -2,30 +2,25 @@ package com.coin.app.service;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-import javax.rmi.CORBA.Util;
-
-import com.coin.app.CoinServerApplication;
 import com.coin.app.dto.data.ResultData;
+import com.coin.app.model.FixtureInfo;
+import com.coin.app.model.enums.FixtureInfoType;
 import com.coin.app.model.livescore.Fixture;
 import com.coin.app.model.enums.FixtureStatus;
-import com.coin.app.model.livescore.single.Book;
-import com.coin.app.model.livescore.single.BookData;
 import com.coin.app.repository.BookDataRepository;
 import com.coin.app.repository.BookRepository;
+import com.coin.app.repository.FixtureInfoRepository;
 import com.coin.app.repository.FixtureRepository;
 import com.coin.app.util.Utills;
 import com.google.gson.JsonArray;
@@ -56,6 +51,9 @@ public class LiveScoreServiceImpl implements LiveScoreService
     @Autowired
     private BookDataRepository bookDataRepository;
 
+    @Autowired
+    private FixtureInfoRepository fixtureInfoRepository;
+
     private Properties props = new Properties();
 
     @Async
@@ -77,56 +75,11 @@ public class LiveScoreServiceImpl implements LiveScoreService
     }
 
     @Override
-    public void loadFixtureBooks()
-    {
-        List<Fixture> fixtures = fixtureRepository.findByLocalDateGreaterThanOrderByDateAscTimeAsc(LocalDate.now().minusDays(1));
-        for (Fixture fixture : fixtures)
-        {
-            String uri = this.root + "odds/fixture/" + fixture.getId() + "/bookmaker/2?api_token=" + this.key;
-            String content = fetchContent(uri);
-            JsonObject fixtureObject = toJsonObject(content);
-            if (fixtureObject.get("data") != null)
-            {
-                JsonArray dataArray = fixtureObject.get("data").getAsJsonArray();
-                for (JsonElement element : dataArray)
-                {
-                    Book book = new Book();
-                    book.setBookId(element.getAsJsonObject().get("id").toString());
-                    book.setType(element.getAsJsonObject().get("name").toString());
-                    book.setFixture(fixture);
-                    book = bookRepository.save(book);
-
-                    JsonArray bookMakerArr = element.getAsJsonObject().get("bookmaker").getAsJsonObject().get("data").getAsJsonArray().get(0).getAsJsonObject().get("odds").getAsJsonObject().get("data").getAsJsonArray();
-                    for (JsonElement maker : bookMakerArr)
-                    {
-                        BookData bookData = new BookData();
-                        bookData.setLabel(maker.getAsJsonObject().get("label") == null ? null : maker.getAsJsonObject().get("label").toString());
-                        bookData.setValue(maker.getAsJsonObject().get("value") == null ? null : maker.getAsJsonObject().get("value").toString());
-                        bookData.setDp3(maker.getAsJsonObject().get("dp3") == null ? null : maker.getAsJsonObject().get("dp3").toString());
-                        bookData.setAmerican(maker.getAsJsonObject().get("american") == null ? null : maker.getAsJsonObject().get("american").toString());
-                        bookData.setWinning(maker.getAsJsonObject().get("winning") == null ? null : maker.getAsJsonObject().get("winning").toString());
-                        bookData.setHandicap(maker.getAsJsonObject().get("handicap") == null ? null : maker.getAsJsonObject().get("handicap").toString());
-                        bookData.setTotal(maker.getAsJsonObject().get("total") == null ? null : maker.getAsJsonObject().get("total").toString());
-                        bookData.setEventId(maker.getAsJsonObject().get("bookmaker_event_id") == null ? null : maker.getAsJsonObject().get("bookmaker_event_id").toString());
-                        String date = maker.getAsJsonObject().get("last_update").getAsJsonObject().get("date").toString().substring(1).split(" ")[0];
-                        String time = maker.getAsJsonObject().get("last_update").getAsJsonObject().get("date").toString().split(" ")[1].substring(0, 8);
-                        bookData.setLastUpdateDate(LocalDate.parse(date));
-                        bookData.setLastUpdateTime(LocalTime.parse(time));
-                        bookData.setBook(book);
-                        bookDataRepository.save(bookData);
-                    }
-
-                }
-            }
-        }
-    }
-
-    @Override
     public List<ResultData> findAllFreeFixtures()
     {
         List<ResultData> results = new ArrayList<>();
 
-        List<Fixture> fixtures = fixtureRepository.findByUsedAndStatusIsAndLocalDateGreaterThanOrderByDateAscTimeAsc(false, FixtureStatus.NS, LocalDate.now().plusDays(4));
+        List<Fixture> fixtures = fixtureRepository.findTop50ByUsedAndStatusIsAndLocalDateGreaterThanOrderByDateAscTimeAsc(false, FixtureStatus.NS, LocalDate.now().plusDays(4));
 
         for (Fixture fixture : fixtures)
         {
@@ -135,33 +88,16 @@ public class LiveScoreServiceImpl implements LiveScoreService
             result.addProperty("checked", false);
             result.addProperty("date", Utills.nameDisplayForDate(fixture.getDate(), true));
             result.addProperty("time", Utills.shortDisplayForTime(fixture.getTime()));
-            result.addProperty("league", Utills.getFarsiName(fixture.getLeagueName()));
-            result.addProperty("homeTeam", Utills.getFarsiName(fixture.getLocalTeamName()));
+            result.addProperty("league", fixtureInfoRepository.findByName(fixture.getLeagueName()).getFarsiName());
+            result.addProperty("homeTeam", fixtureInfoRepository.findByName(fixture.getLocalTeamName()).getFarsiName());
             result.addProperty("homeLogo", fixture.getLocalTeamLogo());
-            result.addProperty("homeCountry", Utills.getFarsiName(fixture.getLocalCountryName()));
-            result.addProperty("awayTeam", Utills.getFarsiName(fixture.getVisitorTeamName()));
+            result.addProperty("homeCountry", fixtureInfoRepository.findByName(fixture.getLocalCountryName()).getFarsiName());
+            result.addProperty("awayTeam", fixtureInfoRepository.findByName(fixture.getVisitorTeamName()).getFarsiName());
             result.addProperty("awayLogo", fixture.getVisitorTeamLogo());
-            result.addProperty("awayCountry", Utills.getFarsiName(fixture.getVisitorCountryName()));
+            result.addProperty("awayCountry", fixtureInfoRepository.findByName(fixture.getVisitorCountryName()).getFarsiName());
             results.add(result);
         }
         return results;
-    }
-
-    @Override
-    public void updateFixtureData(String fixtureIds)
-    {
-        String uri = this.root + "fixtures/multi/" + fixtureIds + "?api_token=" + this.key + "&include=localTeam,visitorTeam,league,goals,inplay";
-        String content = fetchContent(uri);
-        if (content != null)
-        {
-            JsonObject fixtureObject = toJsonObject(content);
-            if (fixtureObject.get("data") != null)
-            {
-                JsonArray dataArray = fixtureObject.get("data").getAsJsonArray();
-                for (JsonElement element : dataArray)
-                    updateFixtureData(element.getAsJsonObject());
-            }
-        }
     }
 
     private void updateFixtureData(JsonObject fixtureObject)
@@ -200,7 +136,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
         {
             JsonObject countryObject = toJsonObject(countryContent);
             fixture.setLocalCountryName(countryObject.get("data").getAsJsonObject().get("name").getAsString().equals("Monaco") ? "France" : countryObject.get("data").getAsJsonObject().get("name").getAsString());
-            if(!countryObject.get("data").getAsJsonObject().get("extra").toString().equals("null"))
+            if (!countryObject.get("data").getAsJsonObject().get("extra").toString().equals("null"))
             {
                 fixture.setLocalCountryFIFAName(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("fifa").getAsString());
                 fixture.setLocalCountryFlag(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("flag").getAsString());
@@ -219,7 +155,7 @@ public class LiveScoreServiceImpl implements LiveScoreService
         {
             JsonObject countryObject = toJsonObject(countryContent);
             fixture.setVisitorCountryName(countryObject.get("data").getAsJsonObject().get("name").getAsString().equals("Monaco") ? "France" : countryObject.get("data").getAsJsonObject().get("name").getAsString());
-            if(!countryObject.get("data").getAsJsonObject().get("extra").toString().equals("null"))
+            if (!countryObject.get("data").getAsJsonObject().get("extra").toString().equals("null"))
             {
                 fixture.setVisitorCountryFIFAName(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("fifa").getAsString());
                 fixture.setVisitorCountryFlag(countryObject.get("data").getAsJsonObject().get("extra").getAsJsonObject().get("flag").getAsString());
@@ -233,177 +169,145 @@ public class LiveScoreServiceImpl implements LiveScoreService
     public List<ResultData> getCountries(boolean onlyWithFarsiName)
     {
         List<ResultData> countriesData = new ArrayList<>();
+        List<String> countries = new ArrayList<>();
+        countries.addAll(fixtureRepository.findLocalCountries());
+        for (String country : fixtureRepository.findVisitorCountries())
+            if (!countries.contains(country))
+                countries.add(country);
+
+        // Remove this part after first prod build
+        /////////////////////////////////////////////////////////////////////////////////////////
         try
         {
             InputStream in = new FileInputStream(Utills.propertiesPath + "country.properties");
             props.load(in);
-
-            List<String> countries = new ArrayList<>();
-            countries.addAll(fixtureRepository.findLocalCountries());
-            for(String country : fixtureRepository.findVisitorCountries())
-                if(!countries.contains(country))
-                    countries.add(country);
-
-            for(String country : countries)
+            for (String country : countries)
             {
-                ResultData resultData = new ResultData(true, "");
-                if (props.get(country) == null)
-                {
-                    resultData.addProperty("name", country);
-                    resultData.addProperty("farsiName", "");
-                }
-                else
-                    if(!onlyWithFarsiName)
-                    {
-                        resultData.addProperty("name", country);
-                        resultData.addProperty("farsiName", props.get(country));
-                    }
-                countriesData.add(resultData);
+                FixtureInfo fixtureInfo = fixtureInfoRepository.findByTypeAndName(FixtureInfoType.COUNTRY, country);
+                if(fixtureInfo == null)
+                    saveCountry(country, props.get(country) == null ? null : props.get(country).toString());
             }
-
-        } catch (IOException ex)
+        } catch (Exception e)
         {
-            ex.printStackTrace();
+            e.printStackTrace();
         }
+        /////////////////////////////////////////////////////////////////////////////////////////
 
+        for (String country : countries)
+        {
+            ResultData resultData = new ResultData(true, "");
+            FixtureInfo fixtureInfo = fixtureInfoRepository.findByTypeAndName(FixtureInfoType.COUNTRY, country);
+            resultData.addProperty("name", country);
+            resultData.addProperty("farsiName", fixtureInfo == null ? "" : fixtureInfo.getFarsiName());
+            countriesData.add(resultData);
+        }
         return countriesData;
     }
 
     @Override
     public void saveCountry(String key, String value)
     {
-        try
-        {
-            InputStream in = new FileInputStream(Utills.propertiesPath + "country.properties");
-            props.load(in);
-            in.close();
-
-            FileOutputStream out = new FileOutputStream(Utills.propertiesPath + "country.properties");
-            props.setProperty(key,value);
-            props.store(out, null);
-            out.close();
-
-        } catch (IOException ex)
-        {
-            ex.printStackTrace();
-        }
+        FixtureInfo fixtureInfo = fixtureInfoRepository.findByTypeAndName(FixtureInfoType.COUNTRY, key);
+        if (fixtureInfo == null)
+            fixtureInfo = new FixtureInfo(FixtureInfoType.COUNTRY, key, value);
+        fixtureInfo.setFarsiName(value);
+        fixtureInfoRepository.save(fixtureInfo);
     }
 
     @Override
     public List<ResultData> getLeagues(boolean onlyWithFarsiName)
     {
         List<ResultData> leaguesData = new ArrayList<>();
+        List<String> leagues = new ArrayList<>();
+        leagues.addAll(fixtureRepository.findLeages());
+
+        // Remove this part after first prod build
+        /////////////////////////////////////////////////////////////////////////////////////////
         try
         {
             InputStream in = new FileInputStream(Utills.propertiesPath + "league.properties");
             props.load(in);
-
-            List<String> leagues = new ArrayList<>();
-            leagues.addAll(fixtureRepository.findLeages());
-
-            for(String league : leagues)
+            for (String league : leagues)
             {
-                ResultData resultData = new ResultData(true, "");
-                if (props.get(league) == null)
-                {
-                    resultData.addProperty("name", league);
-                    resultData.addProperty("farsiName", "");
-                }
-                else
-                if(!onlyWithFarsiName)
-                {
-                    resultData.addProperty("name", league);
-                    resultData.addProperty("farsiName", props.get(league));
-                }
-                leaguesData.add(resultData);
+                FixtureInfo fixtureInfo = fixtureInfoRepository.findByTypeAndName(FixtureInfoType.LEAGUE, league);
+                if(fixtureInfo == null)
+                    saveLeague(league, props.get(league) == null ? null : props.get(league).toString());
             }
-
-        } catch (IOException ex)
+        } catch (Exception e)
         {
-            ex.printStackTrace();
+            e.printStackTrace();
         }
+        /////////////////////////////////////////////////////////////////////////////////////////
 
+        for (String league : leagues)
+        {
+            ResultData resultData = new ResultData(true, "");
+            FixtureInfo fixtureInfo = fixtureInfoRepository.findByTypeAndName(FixtureInfoType.LEAGUE, league);
+            resultData.addProperty("name", league);
+            resultData.addProperty("farsiName", fixtureInfo == null ? "" : fixtureInfo.getFarsiName());
+            leaguesData.add(resultData);
+        }
         return leaguesData;
     }
 
     @Override
     public void saveLeague(String key, String value)
     {
-        try
-        {
-            InputStream in = new FileInputStream(Utills.propertiesPath + "league.properties");
-            props.load(in);
-            in.close();
-
-            FileOutputStream out = new FileOutputStream(Utills.propertiesPath + "league.properties");
-            props.setProperty(key,value);
-            props.store(out, null);
-            out.close();
-
-        } catch (IOException ex)
-        {
-            ex.printStackTrace();
-        }
+        FixtureInfo fixtureInfo = fixtureInfoRepository.findByTypeAndName(FixtureInfoType.LEAGUE, key);
+        if (fixtureInfo == null)
+            fixtureInfo = new FixtureInfo(FixtureInfoType.LEAGUE, key, value);
+        fixtureInfo.setFarsiName(value);
+        fixtureInfoRepository.save(fixtureInfo);
     }
 
     @Override
     public List<ResultData> getTeams(boolean onlyWithFarsiName)
     {
+
         List<ResultData> teamsData = new ArrayList<>();
+        List<String> teams = new ArrayList<>();
+        teams.addAll(fixtureRepository.findLocalTeams());
+        for (String team : fixtureRepository.findVisitorTeams())
+            if (!teams.contains(team))
+                teams.add(team);
+
+        // Remove this part after first prod build
+        /////////////////////////////////////////////////////////////////////////////////////////
         try
         {
-            InputStream in = new FileInputStream(Utills.propertiesPath + "team.properties");
+            InputStream in  = new FileInputStream(Utills.propertiesPath + "team.properties");
             props.load(in);
-
-            List<String> teams = new ArrayList<>();
-            teams.addAll(fixtureRepository.findLocalTeams());
-            for(String team : fixtureRepository.findVisitorTeams())
-                if(!teams.contains(team))
-                    teams.add(team);
-
-            for(String team : teams)
+            for (String team : teams)
             {
-                ResultData resultData = new ResultData(true, "");
-                if (props.get(team) == null)
-                {
-                    resultData.addProperty("name", team);
-                    resultData.addProperty("farsiName", "");
-                }
-                else
-                if(!onlyWithFarsiName)
-                {
-                    resultData.addProperty("name", team);
-                    resultData.addProperty("farsiName", props.get(team));
-                }
-                teamsData.add(resultData);
+                FixtureInfo fixtureInfo = fixtureInfoRepository.findByTypeAndName(FixtureInfoType.TEAM, team);
+                if(fixtureInfo == null)
+                    saveTeam(team, props.get(team) == null ? null : props.get(team).toString());
             }
-
-        } catch (IOException ex)
+        } catch (Exception e)
         {
-            ex.printStackTrace();
+            e.printStackTrace();
         }
+        /////////////////////////////////////////////////////////////////////////////////////////
 
+        for (String team : teams)
+        {
+            ResultData resultData = new ResultData(true, "");
+            FixtureInfo fixtureInfo = fixtureInfoRepository.findByTypeAndName(FixtureInfoType.TEAM, team);
+            resultData.addProperty("name", team);
+            resultData.addProperty("farsiName", fixtureInfo == null ? "" : fixtureInfo.getFarsiName());
+            teamsData.add(resultData);
+        }
         return teamsData;
     }
 
     @Override
     public void saveTeam(String key, String value)
     {
-        try
-        {
-            InputStream in = new FileInputStream(Utills.propertiesPath + "team.properties");
-            props.load(in);
-            in.close();
-
-            FileOutputStream out = new FileOutputStream(Utills.propertiesPath + "team.properties");
-            props.setProperty(key,value);
-            props.store(out, null);
-            out.close();
-
-        } catch (IOException ex)
-        {
-            ex.printStackTrace();
-        }
+        FixtureInfo fixtureInfo = fixtureInfoRepository.findByTypeAndName(FixtureInfoType.TEAM, key);
+        if (fixtureInfo == null)
+            fixtureInfo = new FixtureInfo(FixtureInfoType.TEAM, key, value);
+        fixtureInfo.setFarsiName(value);
+        fixtureInfoRepository.save(fixtureInfo);
     }
 
     private static String fetchContent(String uri)

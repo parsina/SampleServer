@@ -11,16 +11,12 @@ import com.coin.app.dto.data.ResultData;
 import com.coin.app.model.enums.FormStatus;
 import com.coin.app.model.enums.FormTemplateStatus;
 import com.coin.app.model.enums.FormTemplateType;
-import com.coin.app.repository.UserRepository;
 import com.coin.app.service.FormService;
 import com.coin.app.service.LiveScoreService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.annotation.Secured;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -164,16 +160,16 @@ public class FormController
         return formService.updateForm(Long.valueOf(input.get("formId").toString()), Long.valueOf(input.get("userId").toString()), Boolean.valueOf(input.get("real").toString()), (List<ResultData>) input.get("formData"));
     }
 
-    @PostMapping("/finalizeFormsData")
-    public ResultData finalizeFormsData(@RequestBody Map<String, String> input)
+    @PostMapping("/getFormsData")
+    public ResultData getFormsData(@RequestBody Map<String, String> input)
     {
-        return formService.findFinalizedForms(input.get("templateId"), input.get("formType"), input.get("filter"), input.get("sortOrder"), input.get("sortBy"), Integer.valueOf(input.get("pageNumber")), Integer.valueOf(input.get("pageSize")));
+        return formService.findFormsData(input.get("templateId"), input.get("formType"), input.get("formStatus"), input.get("filter"), input.get("sortOrder"), input.get("sortBy"), Integer.valueOf(input.get("pageNumber")), Integer.valueOf(input.get("pageSize")));
     }
 
-    @PostMapping("/finalizeFormsCount")
-    public Long finalizeFormsCount(@RequestBody Map<String, String> input)
+    @PostMapping("/getTotalFormsSize")
+    public Long getTotalFormsSize(@RequestBody Map<String, String> input)
     {
-        return formService.countFinalizedForms(input.get("templateId"), input.get("formType"));
+        return formService.countForms(input.get("templateId"), input.get("formType"), input.get("formStatus"));
     }
 
 

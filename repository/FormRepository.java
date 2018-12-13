@@ -36,11 +36,11 @@ public interface FormRepository  extends JpaRepository<Form, Long>
 
     Long countByAccountAndStatusIn(Account account, List<FormStatus> statuses);
 
-    List<Form> findByFormTemplateIdAndStatus(Long id, FormStatus status, Pageable pageable);
+    List<Form> findByFormTemplateIdAndStatusIsIn(Long id, List<FormStatus> statuses, Pageable pageable);
 
-    List<Form> findByFormTemplateIdAndStatusAndReal(Long id, FormStatus status, boolean real, Pageable pageable);
+    List<Form> findByFormTemplateIdAndStatusIsInAndReal(Long id, List<FormStatus> statuses, boolean real, Pageable pageable);
 
-    Long countByFormTemplateIdAndStatus(Long id, FormStatus status);
+    Long countByFormTemplateIdAndStatusIsIn(Long id, List<FormStatus> status);
 
-    Long countByFormTemplateIdAndStatusAndReal(Long id, FormStatus status, boolean real);
+    Long countByFormTemplateIdAndStatusIsInAndReal(Long id, List<FormStatus> status, boolean real);
 }

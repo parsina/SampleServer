@@ -175,24 +175,6 @@ public class LiveScoreServiceImpl implements LiveScoreService
             if (!countries.contains(country))
                 countries.add(country);
 
-        // Remove this part after first prod build
-        /////////////////////////////////////////////////////////////////////////////////////////
-        try
-        {
-            InputStream in = new FileInputStream(Utills.propertiesPath + "country.properties");
-            props.load(in);
-            for (String country : countries)
-            {
-                FixtureInfo fixtureInfo = fixtureInfoRepository.findByTypeAndName(FixtureInfoType.COUNTRY, country);
-                if(fixtureInfo == null)
-                    saveCountry(country, props.get(country) == null ? null : props.get(country).toString());
-            }
-        } catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-        /////////////////////////////////////////////////////////////////////////////////////////
-
         for (String country : countries)
         {
             ResultData resultData = new ResultData(true, "");
@@ -220,24 +202,6 @@ public class LiveScoreServiceImpl implements LiveScoreService
         List<ResultData> leaguesData = new ArrayList<>();
         List<String> leagues = new ArrayList<>();
         leagues.addAll(fixtureRepository.findLeages());
-
-        // Remove this part after first prod build
-        /////////////////////////////////////////////////////////////////////////////////////////
-        try
-        {
-            InputStream in = new FileInputStream(Utills.propertiesPath + "league.properties");
-            props.load(in);
-            for (String league : leagues)
-            {
-                FixtureInfo fixtureInfo = fixtureInfoRepository.findByTypeAndName(FixtureInfoType.LEAGUE, league);
-                if(fixtureInfo == null)
-                    saveLeague(league, props.get(league) == null ? null : props.get(league).toString());
-            }
-        } catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-        /////////////////////////////////////////////////////////////////////////////////////////
 
         for (String league : leagues)
         {
@@ -270,24 +234,6 @@ public class LiveScoreServiceImpl implements LiveScoreService
         for (String team : fixtureRepository.findVisitorTeams())
             if (!teams.contains(team))
                 teams.add(team);
-
-        // Remove this part after first prod build
-        /////////////////////////////////////////////////////////////////////////////////////////
-        try
-        {
-            InputStream in  = new FileInputStream(Utills.propertiesPath + "team.properties");
-            props.load(in);
-            for (String team : teams)
-            {
-                FixtureInfo fixtureInfo = fixtureInfoRepository.findByTypeAndName(FixtureInfoType.TEAM, team);
-                if(fixtureInfo == null)
-                    saveTeam(team, props.get(team) == null ? null : props.get(team).toString());
-            }
-        } catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-        /////////////////////////////////////////////////////////////////////////////////////////
 
         for (String team : teams)
         {

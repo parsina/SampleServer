@@ -12,7 +12,7 @@ public interface FormTemplateRepository extends JpaRepository<FormTemplate, Long
 {
     long countByType(FormTemplateType type);
 
-    List<FormTemplate> findAllByStatusIsInOrderByCreatedDateAsc(List<FormTemplateStatus> statuses);
+    List<FormTemplate> findAllByStatusIsInOrderByIdAsc(List<FormTemplateStatus> statuses);
 
     List<FormTemplate> findByStatusIsIn(List<FormTemplateStatus> statuses, Pageable pageable);
 

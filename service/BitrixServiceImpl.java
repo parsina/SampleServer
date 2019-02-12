@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
-import java.util.Timer;
 import java.util.UUID;
 
 import com.coin.app.dto.data.ResultData;
@@ -474,7 +473,7 @@ public class BitrixServiceImpl implements BitrixService
                 user.setStatus(UserStatus.ACTIVE);
                 user.setBalance(user.getBalance() - price);
                 user.setStep(user.getStep() + 1);
-                createTransaction(price, "Activate level " + user.getStep(), user.getPlan() + "_" + user.getStep() + "_" + user.getId(), TransactionType.COST, user);
+                createTransaction(price, "Activate level " + user.getStep(), user.getPlan() + "_" + user.getStep() + "_" + user.getId(), TransactionType.PAYMENT, user);
                 user.setRefereeURL(appUrl + "/#/Register?ref=" + user.getReferee());
                 user = bitrixRepository.save(user);
                 Bitrix refreeUser = bitrixRepository.findByUsername(user.getReference().trim());
@@ -547,7 +546,7 @@ public class BitrixServiceImpl implements BitrixService
                 user.setStep(user.getStep() + 1);
                 user.setStatus(UserStatus.ACTIVE);
                 user.setBalance(user.getBalance() - price);
-                createTransaction(price, "Activate level " + user.getStep(), user.getPlan() + "_" + user.getStep() + "_" + user.getId(), TransactionType.COST, user);
+                createTransaction(price, "Activate level " + user.getStep(), user.getPlan() + "_" + user.getStep() + "_" + user.getId(), TransactionType.PAYMENT, user);
                 bitrixRepository.save(user);
             }
         }
@@ -785,10 +784,10 @@ public class BitrixServiceImpl implements BitrixService
             Long adminShare = capital / 5;
 
             user.setBalance(user.getBalance() + userShare);
-            createTransaction(userShare, "Matrix completion in level " + user.getStep() + " [plan: " + user.getPlan() + "]", "MATRIX_" + user.getPlan() + "_" + user.getStep() + "_" + user.getId(), TransactionType.INCOME, user);
+            createTransaction(userShare, "Matrix completion in level " + user.getStep() + " [plan: " + user.getPlan() + "]", "MATRIX_" + user.getPlan() + "_" + user.getStep() + "_" + user.getId(), TransactionType.REWARD, user);
 
             admin.setBalance(admin.getBalance() + adminShare);
-            createTransaction(adminShare, "Matrix completion in level " + user.getStep() + " [plan: " + user.getPlan() + "] by " + user.getUsername() + " (ID: " + user.getId() + ")", "MATRIX_" + user.getPlan() + "_" + user.getStep() + "_BY_USER_ID_" + user.getId(), TransactionType.INCOME, admin);
+            createTransaction(adminShare, "Matrix completion in level " + user.getStep() + " [plan: " + user.getPlan() + "] by " + user.getUsername() + " (ID: " + user.getId() + ")", "MATRIX_" + user.getPlan() + "_" + user.getStep() + "_BY_USER_ID_" + user.getId(), TransactionType.REWARD, admin);
 
             fund.setBalance(fund.getBalance() - (userShare + adminShare));
             bitrixRepository.save(user);

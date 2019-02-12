@@ -1,17 +1,15 @@
 package com.coin.app.security;
 
-import com.coin.app.model.User;
-import org.springframework.security.core.userdetails.UserDetails;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
+
+import com.coin.app.model.Bitrix;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 public class UserPrincipal implements UserDetails
 {
@@ -38,12 +36,12 @@ public class UserPrincipal implements UserDetails
         this.authorities = authorities;
     }
 
-    public static UserPrincipal create(User user)
+    public static UserPrincipal create(Bitrix user)
     {
 
         List<GrantedAuthority> authorities = new ArrayList<>();
         authorities.add(new SimpleGrantedAuthority(user.getRole().name()));
-        return new UserPrincipal(user.getId(), "Test User", user.getUsername(), user.getEmail(), user.getPassword(), authorities);
+        return new UserPrincipal(user.getId(), "Bitrix User", user.getUsername(), user.getEmail(), user.getPassword(), authorities);
     }
 
     public Long getId()

@@ -2,6 +2,7 @@ package com.coin.app;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 
 import com.coin.app.security.ClientTest;
 import com.coin.app.service.BitcoinJService;
@@ -35,13 +36,14 @@ public class CoinServerApplication
     @Bean
     ApplicationRunner init()
     {
-       bitcoinJService.initialize();
+        bitcoinJService.initialize();
 
-//    //  To create Certificate uncomment this section and comment above line.
-//    //  You probably need to run project multiple time to provide certificate file
-//    //  At the end, it create 4 files: userkey.pem, domainkey.pem, bigbitbet.csr, bigbitbet.cer
-//    //  You have to copy domainkey.pem and bigbitbet.cer to ec2 server
-//        Collection<String> domains = Arrays.asList("www.bigbitbet.com", "bigbitbet.com");
+    //  To create Certificate uncomment this section and comment above line.
+    //  You probably need to run project multiple time to provide certificate file
+    //  At the end, it create 4 files: userkey.pem, domainkey.pem, bitrixo.csr, bitrixo.cer
+    //  You have to copy domainkey.pem and bitrixo.cer to ec2 server
+
+//        Collection<String> domains = Arrays.asList("www.bitrixo.com", "bitrixo.com");
 //        try
 //        {
 //            ClientTest ct = new ClientTest();
@@ -49,6 +51,9 @@ public class CoinServerApplication
 //        } catch (Exception ex)
 //        {
 //            System.out.println(" >>>>>> Error : Failed to get a certificate for domains " + domains);
+//            System.out.println(" >>>>>> Details: " + ex.getMessage());
+//            if(ex.getMessage().contains("Challenge failed... Giving up."))
+//                init();
 //        }
         return args ->
         {

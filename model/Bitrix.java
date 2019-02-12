@@ -1,24 +1,24 @@
 package com.coin.app.model;
 
+
 import java.util.Date;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.OneToOne;
-import javax.persistence.Table;
+import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
 
+import com.coin.app.model.enums.BitrixType;
 import com.coin.app.model.enums.UserRole;
 import com.coin.app.model.enums.UserStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.Setter;
 import lombok.ToString;
@@ -26,42 +26,56 @@ import lombok.ToString;
 @Entity
 @Getter
 @Setter
+@NoArgsConstructor
 @ToString
 @EqualsAndHashCode
-@Table(name = "User")
 
-public class User
+public class Bitrix
 {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String username;
+    private @NotNull String username;
+
+    private @NonNull String email;
 
     @JsonIgnore
     private String password;
 
-    private @NonNull String email;
-
     private Date createdDate;
 
-    private @NonNull Long parentId;
+    private @NotNull String reference;
 
-    private @NotNull String confirmationToken;
+    private @NotNull String referee;
 
-    @Enumerated(EnumType.STRING)
-    private @NotNull UserRole role;
+    @Transient
+    private String refereeURL;
+
+    private @NotNull String token;
+
+    private @NotNull Long parentId;
+
+    private Long firstChildId;
+
+    private Long secondChildId;
+
+    private @NonNull Long balance;
+
+    private @NonNull String address;
+
+    private @NonNull int step;
+
+    private @NonNull int nodes;
+
+    private String description;
 
     @Enumerated(EnumType.STRING)
     private @NotNull UserStatus status;
 
-    @OneToOne
-    private Account account;
+    @Enumerated(EnumType.STRING)
+    private @NonNull BitrixType plan;
 
-    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    private UserInfo userInfo;
-
-    public User()
-    {
-    }
+    @Enumerated(EnumType.STRING)
+    private @NonNull UserRole role;
 }

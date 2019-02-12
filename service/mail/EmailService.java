@@ -4,11 +4,9 @@ import com.coin.app.dto.data.ResultData;
 
 public interface EmailService
 {
-    void sendActivationLink(String email);
+    void sendVerification(String email, String token);
 
-    void sendInvitationEmail(String email);
-
-    ResultData sendWithdrawalCode(String userId);
+    ResultData sendWithdrawalCode(String email, String code);
 
     void sendNewPassword(String email, String password);
 }

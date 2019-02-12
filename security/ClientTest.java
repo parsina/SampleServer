@@ -53,16 +53,16 @@ import org.slf4j.LoggerFactory;
 public class ClientTest
 {
     // File name of the User Key Pair
-    private static final File USER_KEY_FILE = new File("uservkey.pem");
+    private static final File USER_KEY_FILE = new File("userkey.pem");
 
     // File name of the Domain Key Pair
     private static final File DOMAIN_KEY_FILE = new File("domainkey.pem");
 
     // File name of the CSR
-    private static final File DOMAIN_CSR_FILE = new File("bigbitbet.csr");
+    private static final File DOMAIN_CSR_FILE = new File("bitrixo.csr");
 
     // File name of the signed certificate
-    private static final File DOMAIN_CHAIN_FILE = new File("bigbitbet.cer");
+    private static final File DOMAIN_CHAIN_FILE = new File("bitrixo.cer");
 
     //Challenge type to be used
     private static final ChallengeType CHALLENGE_TYPE = ChallengeType.DNS;
@@ -151,8 +151,10 @@ public class ClientTest
         // Get the certificate
         Certificate certificate = order.getCertificate();
 
-        LOG.info("Success! The certificate for domains {} has been generated!", domains);
-        LOG.info("Certificate URL: {}", certificate.getLocation());
+//        LOG.info("Success! The certificate for domains {} has been generated!", domains);
+//        LOG.info("Certificate URL: {}", certificate.getLocation());
+        System.out.println("Success! The certificate for folowing domains has been generated! " + domains.toString());
+        System.out.println("Certificate URL: " + certificate.getLocation());
 
         // Write a combined file containing the certificate and chain.
         try (FileWriter fw = new FileWriter(DOMAIN_CHAIN_FILE))
@@ -237,17 +239,18 @@ public class ClientTest
     private Account findOrRegisterAccount(Session session, KeyPair accountKey) throws AcmeException
     {
         // Ask the user to accept the TOS, if server provides us with a link.
-        URI tos = session.getMetadata().getTermsOfService();
-        if (tos != null)
-        {
-            acceptAgreement(tos);
-        }
+//        URI tos = session.getMetadata().getTermsOfService();
+//        if (tos != null)
+//        {
+//            acceptAgreement(tos);
+//        }
 
         Account account = new AccountBuilder()
                 .agreeToTermsOfService()
                 .useKeyPair(accountKey)
                 .create(session);
-        LOG.info("Registered a new user, URL: {}", account.getLocation());
+//        LOG.info("Registered a new user, URL: {}", account.getLocation());
+        System.out.println("Registered a new user, URL: " + account.getLocation());
 
         return account;
     }
@@ -260,7 +263,8 @@ public class ClientTest
      */
     private void authorize(Authorization auth) throws AcmeException
     {
-        LOG.info("Authorization for domain {}", auth.getIdentifier().getDomain());
+//        LOG.info("Authorization for domain {}", auth.getIdentifier().getDomain());
+        System.out.println("Authorization for domain " + auth.getIdentifier().getDomain());
 
         // The authorization is already valid. No need to process a challenge.
         if (auth.getStatus() == Status.VALID)
@@ -326,8 +330,9 @@ public class ClientTest
                     + auth.getIdentifier().getDomain() + ", ... Giving up.");
         }
 
-        LOG.info("Challenge has been completed. Remember to remove the validation resource.");
-        completeChallenge("Challenge has been completed.\nYou can remove the resource again now.");
+//        LOG.info("Challenge has been completed. Remember to remove the validation resource.");
+        System.out.println("Challenge has been completed. Remember to remove the validation resource.");
+//        completeChallenge("Challenge has been completed.\nYou can remove the resource again now.");
     }
 
     /**
@@ -360,6 +365,13 @@ public class ClientTest
         LOG.info("Content: {}", challenge.getAuthorization());
         LOG.info("The file must not contain any leading or trailing whitespaces or line breaks!");
         LOG.info("If you're ready, dismiss the dialog...");
+
+        System.out.println("Please create a file in your web server's base directory.");
+        System.out.println("It must be reachable at: http://" + auth.getIdentifier().getDomain() + "/.well-known/acme-challenge/" + challenge.getToken());
+        System.out.println("File name: " + challenge.getToken());
+        System.out.println("Content: " + challenge.getAuthorization());
+        System.out.println("The file must not contain any leading or trailing whitespaces or line breaks!");
+        System.out.println("If you're ready, dismiss the dialog...");
 
         StringBuilder message = new StringBuilder();
         message.append("Please create a file in your web server's base directory.\n\n");
@@ -396,10 +408,14 @@ public class ClientTest
         }
 
         // Output the challenge, wait for acknowledge...
-        LOG.info("Please create a TXT record:");
-        LOG.info("_acme-challenge.{}. IN TXT {}",
-                auth.getIdentifier().getDomain(), challenge.getDigest());
-        LOG.info("If you're ready, dismiss the dialog...");
+//        LOG.info("Please create a TXT record:");
+//        LOG.info("_acme-challenge.{}. IN TXT {}",
+//                auth.getIdentifier().getDomain(), challenge.getDigest());
+//        LOG.info("If you're ready, dismiss the dialog...");
+
+        System.out.println("Please create a TXT record:");
+        System.out.println("_acme-challenge." + auth.getIdentifier().getDomain() + ". IN TXT " + challenge.getDigest());
+        System.out.println("If you're ready, dismiss the dialog...");
 
         StringBuilder message = new StringBuilder();
         message.append("Please create a TXT record:\n\n");
@@ -420,11 +436,17 @@ public class ClientTest
      */
     public void acceptChallenge(String message) throws AcmeException
     {
-        LOG.info("================================================");
-        LOG.info("Prepare Challenge");
-        LOG.info(message);
-        LOG.info("\n");
-        LOG.info("Are create the file?(yes/no): ");
+//        LOG.info("================================================");
+//        LOG.info("Prepare Challenge");
+//        LOG.info(message);
+//        LOG.info("\n");
+//        LOG.info("Are create the file?(yes/no): ");
+
+        System.out.println("================================================");
+        System.out.println("Prepare Challenge");
+        System.out.println(message);
+        System.out.println("\n");
+        System.out.println("Are create the file?(yes/no): ");
         String option = scanner.nextLine();
 
         if (option.trim().toLowerCase().equals("yes"))
@@ -455,10 +477,14 @@ public class ClientTest
     public void acceptAgreement(URI agreement) throws AcmeException
     {
 
-        LOG.info("================================================");
-        LOG.info("Accept ToS");
-        LOG.info("Please read the Terms of Service?\n\n" + agreement + "\n\n");
-        LOG.info("Do you accept the Terms of Service?(yes/no): " );
+//        LOG.info("================================================");
+//        LOG.info("Accept ToS");
+//        LOG.info("Please read the Terms of Service?\n\n" + agreement + "\n\n");
+//        LOG.info("Do you accept the Terms of Service?(yes/no): " );
+        System.out.println("================================================");;
+        System.out.println("Accept ToS");
+        System.out.println("Please read the Terms of Service?\n\n" + agreement + "\n\n");
+        System.out.println("Do you accept the Terms of Service?(yes/no): " );
         String option = scanner.nextLine();
 
         if (option.trim().toLowerCase().equals("yes"))

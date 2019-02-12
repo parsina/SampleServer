@@ -2,6 +2,7 @@ package com.coin.app.model;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Date;
 
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -10,11 +11,14 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
-import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
+import com.coin.app.model.enums.BitrixType;
 import com.coin.app.model.enums.TransactionStatus;
 import com.coin.app.model.enums.TransactionType;
+import com.coin.app.model.enums.UserRole;
+import com.coin.app.model.enums.UserStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,9 +32,8 @@ import lombok.ToString;
 @NoArgsConstructor
 @ToString
 @EqualsAndHashCode
-@Table(name = "\"Transaction\"")
 
-public class Transaction
+public class BitrixTransaction
 {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -51,15 +54,14 @@ public class Transaction
     private @NotNull Long totalValue;
 
     @ManyToOne
-    private @NotNull Account account;
+    private @NotNull Bitrix user;
 
     private String description;
 
     @Enumerated(EnumType.STRING)
-    private @NonNull TransactionStatus status;
+    private @NonNull
+    TransactionStatus status;
 
     @Enumerated(EnumType.STRING)
     private TransactionType type;
 }
-
-
